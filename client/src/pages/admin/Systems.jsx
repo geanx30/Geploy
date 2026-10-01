@@ -30,6 +30,7 @@ export default function SystemsAdmin() {
   const [modal, setModal] = useState(null); // { mode, system }
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [removeTokenConfirmOpen, setRemoveTokenConfirmOpen] = useState(false);
   const [error, setError] = useState('');
 
   function load() {
@@ -99,6 +100,18 @@ export default function SystemsAdmin() {
     } catch (err) {
       push(err.message, 'error');
       setDeleteTarget(null);
+    }
+  }
+
+  async function handleRemoveToken() {
+    try {
+      await api.del(`/systems/${modal.system.id}/git-credentials`);
+      push('Token removido. O dono vai precisar cadastrar um novo para atualizar.', 'success');
+      setRemoveTokenConfirmOpen(false);
+      setModal(null);
+      load();
+    } catch (err) {
+      push(err.message, 'error');
     }
   }
 
@@ -319,6 +332,16 @@ export default function SystemsAdmin() {
                   Se deixar o token em branco, o dono do sistema será obrigado a cadastrar o próprio token (na tela
                   dele) antes de conseguir atualizar.
                 </p>
+                {modal?.mode === 'edit' && modal.system.has_git_credentials && (
+                  <button
+                    type="button"
+                    onClick={() => setRemoveTokenConfirmOpen(true)}
+                    className="col-span-2 flex items-center gap-1.5 self-start text-xs text-slate-500 hover:text-rose-600 dark:hover:text-rose-300"
+                  >
+                    <Trash2 size={12} />
+                    Remover token já cadastrado (o dono vai precisar cadastrar um novo)
+                  </button>
+                )}
               </div>
             )}
 
@@ -372,6 +395,15 @@ export default function SystemsAdmin() {
         confirmLabel="Remover"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={removeTokenConfirmOpen}
+        title="Remover o token cadastrado?"
+        message="O sistema volta a exigir um token de acesso antes de atualizar — útil para quando o sistema vai trocar de dono."
+        confirmLabel="Remover"
+        onCancel={() => setRemoveTokenConfirmOpen(false)}
+        onConfirm={handleRemoveToken}
       />
     </div>
   );

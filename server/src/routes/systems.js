@@ -87,6 +87,20 @@ router.put('/:id/git-credentials', loadSystemAndCheckOwnership, (req, res) => {
   res.json({ ok: true });
 });
 
+router.delete('/:id/git-credentials', loadSystemAndCheckOwnership, (req, res) => {
+  db.prepare(`UPDATE systems SET git_username=NULL, git_token_encrypted=NULL WHERE id=?`).run(req.system.id);
+
+  logAction({
+    userId: req.user.sub,
+    systemId: req.system.id,
+    action: 'git-credentials-removed',
+    success: true,
+    output: 'Credencial de git removida. O sistema voltou a exigir um token de acesso.',
+  });
+
+  res.json(toPublicSystem(db.prepare('SELECT * FROM systems WHERE id = ?').get(req.system.id)));
+});
+
 router.post('/:id/preview-update', loadSystemAndCheckOwnership, async (req, res) => {
   if (needsGitToken(req.system)) {
     return res.json({

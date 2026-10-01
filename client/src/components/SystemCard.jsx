@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Play, Square, RotateCw, Server, Globe, FolderGit2, ExternalLink, KeyRound } from 'lucide-react';
+import { RefreshCw, Play, Square, RotateCw, Server, Globe, FolderGit2, ExternalLink, KeyRound, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext.jsx';
 import StatusBadge from './StatusBadge.jsx';
@@ -42,7 +42,10 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [needsGitToken, setNeedsGitToken] = useState(system.needs_git_token);
+  const [hasGitCredentials, setHasGitCredentials] = useState(system.has_git_credentials);
   const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
+  const [removeTokenConfirm, setRemoveTokenConfirm] = useState(false);
+  const [removingToken, setRemovingToken] = useState(false);
 
   async function refreshStatus() {
     setStatus('checking');
@@ -124,6 +127,21 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
     runAction('update', 'Atualização', { post_update_commands: updateCommandsDraft });
   }
 
+  async function removeToken() {
+    setRemovingToken(true);
+    try {
+      await api.del(`/systems/${system.id}/git-credentials`);
+      setHasGitCredentials(false);
+      setNeedsGitToken(system.git_auth_type === 'https_token');
+      setRemoveTokenConfirm(false);
+      push('Token removido. Quem for atualizar este sistema vai precisar cadastrar um novo.', 'success');
+    } catch (err) {
+      push(err.message, 'error');
+    } finally {
+      setRemovingToken(false);
+    }
+  }
+
   const ProcessIcon = system.process_type === 'iis_site' ? Globe : Server;
 
   return (
@@ -164,6 +182,16 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
           <KeyRound size={12} className="shrink-0" />
           Falta configurar seu token de acesso ao repositório
         </div>
+      )}
+
+      {!needsGitToken && hasGitCredentials && system.git_auth_type === 'https_token' && (
+        <button
+          onClick={() => setRemoveTokenConfirm(true)}
+          className="flex items-center gap-1.5 self-start text-[11px] text-slate-400 hover:text-rose-600 dark:text-slate-600 dark:hover:text-rose-300"
+        >
+          <Trash2 size={11} className="shrink-0" />
+          Remover token de acesso cadastrado
+        </button>
       )}
 
       <div className="mt-auto flex items-center gap-1.5 pt-1">
@@ -227,6 +255,15 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
         preview={preview}
         previewLoading={previewLoading}
         isAdmin={user?.role === 'admin'}
+      />
+
+      <ConfirmDialog
+        open={removeTokenConfirm}
+        title="Remover token de acesso?"
+        message="O sistema volta a exigir um token antes de atualizar — útil se o sistema vai trocar de dono. Essa ação não pode ser desfeita."
+        confirmLabel={removingToken ? 'Removendo...' : 'Remover'}
+        onCancel={() => setRemoveTokenConfirm(false)}
+        onConfirm={removeToken}
       />
 
       <ConfirmDialog

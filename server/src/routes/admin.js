@@ -121,7 +121,12 @@ router.get('/systems', (req, res) => {
        JOIN users u ON u.id = s.owner_user_id ORDER BY s.name`
     )
     .all();
-  res.json(rows.map(({ git_token_encrypted, ...rest }) => rest));
+  res.json(
+    rows.map(({ git_token_encrypted, ...rest }) => ({
+      ...rest,
+      has_git_credentials: Boolean(git_token_encrypted || rest.git_ssh_key_path),
+    }))
+  );
 });
 
 router.post('/systems', (req, res) => {

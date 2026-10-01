@@ -25,7 +25,7 @@ export default function Dashboard() {
   return (
     <div>
       <div className="mb-7">
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           {user?.role === 'admin' ? 'Todos os sistemas' : 'Meus sistemas'}
         </h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -37,9 +37,9 @@ export default function Dashboard() {
 
       {!loading && systems.length === 0 && (
         <div className="panel flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <Inbox size={32} className="text-slate-600" />
-          <p className="text-slate-400">Nenhum sistema cadastrado para você ainda.</p>
-          <p className="text-sm text-slate-600">Peça a um administrador para cadastrar seu sistema.</p>
+          <Inbox size={32} className="text-slate-400 dark:text-slate-600" />
+          <p className="text-slate-600 dark:text-slate-400">Nenhum sistema cadastrado para você ainda.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-600">Peça a um administrador para cadastrar seu sistema.</p>
         </div>
       )}
 

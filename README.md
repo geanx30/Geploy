@@ -15,6 +15,10 @@ Tela **SMTP** (admin) configura o servidor de envio (host, porta, usuário/senha
 - **Atualização suspeita**: quando a análise de risco encontra algo e a atualização fica pendente de aprovação, todos os admins com e-mail cadastrado recebem um aviso.
 - **Sistema fora do ar**: um monitor interno verifica o status de todos os sistemas a cada minuto; se um sistema ficar fora do ar por **3 minutos seguidos**, é enviado um e-mail para todos os admins + o dono do sistema (só uma vez por queda, não fica repetindo — só alerta de novo se cair outra vez depois de ter voltado).
 
+## Tema claro/escuro
+
+Botão de sol/lua ao lado de "Minha conta" na barra lateral. A preferência fica salva no navegador de cada pessoa (`localStorage`), então cada usuário escolhe o seu sem afetar os outros.
+
 ## Estrutura
 
 ```
@@ -96,7 +100,7 @@ Tela **Sistemas → Novo sistema**:
 - **Pasta do repositório**: caminho local no servidor (ex.: `C:\Sistemas\NomeDoSistema`).
 - **Tipo de processo**: Serviço Windows (informe o nome exato do serviço, igual ao `sc query`) ou Site IIS (nome do site e, opcionalmente, do App Pool para recycle no restart).
 - **Credencial do Git**: necessária se o repositório for privado.
-  - *HTTPS + Token*: gere um PAT (Personal Access Token) no GitHub/Azure DevOps/GitLab com permissão só de leitura (`repo`/`read_repository`) e cole aqui. Fica criptografado no banco.
+  - *HTTPS + Token*: gere um PAT (Personal Access Token) no GitHub/Azure DevOps/GitLab com permissão só de leitura (`repo`/`read_repository`) e cole aqui. Fica criptografado no banco. **O token é opcional**: se o admin deixar em branco, o card do sistema mostra "Configurar token" para o dono até ele mesmo cadastrar o próprio PAT — só depois disso o botão Atualizar libera.
   - *Chave SSH*: informe o caminho de um arquivo de chave privada (deploy key) já existente no servidor, dedicado a esse repositório.
 - **Comandos pós-atualização (opcional)**: um comando por linha, executado nessa ordem na pasta do repositório logo após o `git pull` ter sucesso (ex.: `npm install`, `npm run build`, `node scripts/init-db.js`). Para na primeira falha. Esses são os comandos "de base" do sistema.
 - **Endereço interno / DNS público (opcional)**: onde o sistema roda (ex.: `vm-sistemas:3000`) e/ou o domínio público (ex.: `gcontrol.grupogadens.com.br`). Aparecem como links clicáveis no card, para quem for acessar o sistema não precisar perguntar.

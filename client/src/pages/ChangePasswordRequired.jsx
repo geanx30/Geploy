@@ -9,7 +9,7 @@ export default function ChangePasswordRequired() {
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-glow">
             <KeyRound size={22} className="text-white" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Troque sua senha</h1>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Troque sua senha</h1>
           <p className="mt-1 text-sm text-slate-500">
             Por segurança, você precisa definir uma nova senha antes de continuar.
           </p>

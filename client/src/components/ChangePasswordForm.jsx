@@ -76,7 +76,7 @@ export default function ChangePasswordForm({ onSuccess, submitLabel = 'Trocar se
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+        <div className="alert-error">
           <AlertCircle size={15} className="shrink-0" />
           {error}
         </div>

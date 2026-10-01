@@ -7,13 +7,24 @@ const { applySystemUpdate } = require('../services/applyUpdate');
 const { performAction } = require('../services/processControl');
 const { logAction } = require('../audit');
 const { sendRiskAlert } = require('../services/alerts');
+const { encrypt } = require('../crypto');
 
 const router = express.Router();
 router.use(requireAuth, requirePasswordChanged);
 
+// Admin pode deixar o token em branco ao cadastrar o sistema; nesse caso,
+// o dono fica obrigado a configurar o proprio token antes de atualizar.
+function needsGitToken(system) {
+  return system.git_auth_type === 'https_token' && !system.git_token_encrypted;
+}
+
 function toPublicSystem(system) {
   const { git_token_encrypted, git_ssh_key_path, ...rest } = system;
-  return { ...rest, has_git_credentials: Boolean(git_token_encrypted || git_ssh_key_path) };
+  return {
+    ...rest,
+    has_git_credentials: Boolean(git_token_encrypted || git_ssh_key_path),
+    needs_git_token: needsGitToken(system),
+  };
 }
 
 router.get('/', (req, res) => {
@@ -55,13 +66,49 @@ router.get('/:id/audit', loadSystemAndCheckOwnership, (req, res) => {
   res.json(rows);
 });
 
+router.put('/:id/git-credentials', loadSystemAndCheckOwnership, (req, res) => {
+  const { git_username, git_token } = req.body || {};
+  if (!git_token) {
+    return res.status(400).json({ error: 'Informe o token de acesso ao repositório' });
+  }
+
+  db.prepare(
+    `UPDATE systems SET git_auth_type='https_token', git_username=?, git_token_encrypted=? WHERE id=?`
+  ).run(git_username || null, encrypt(git_token), req.system.id);
+
+  logAction({
+    userId: req.user.sub,
+    systemId: req.system.id,
+    action: 'git-credentials-set',
+    success: true,
+    output: 'Credencial de git configurada pelo dono do sistema.',
+  });
+
+  res.json({ ok: true });
+});
+
 router.post('/:id/preview-update', loadSystemAndCheckOwnership, async (req, res) => {
+  if (needsGitToken(req.system)) {
+    return res.json({
+      success: false,
+      error: 'Este sistema precisa de um token de acesso ao repositório. Configure antes de atualizar.',
+    });
+  }
   const preview = await previewUpdate(req.system);
   res.json(preview);
 });
 
 router.post('/:id/update', loadSystemAndCheckOwnership, async (req, res) => {
   const isAdmin = req.user.role === 'admin';
+
+  if (needsGitToken(req.system)) {
+    const result = {
+      success: false,
+      output: 'Este sistema precisa de um token de acesso ao repositório. Configure antes de atualizar.',
+    };
+    logAction({ userId: req.user.sub, systemId: req.system.id, action: 'update', success: false, output: result.output });
+    return res.json(result);
+  }
 
   // Comandos podem ser ajustados pelo dono so para esta execucao (nao sao
   // persistidos aqui); se nao vierem no corpo, usa o que o admin configurou.

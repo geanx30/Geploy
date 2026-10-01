@@ -77,14 +77,14 @@ export default function SmtpAdmin() {
   return (
     <div>
       <div className="mb-7">
-        <h1 className="text-2xl font-bold tracking-tight text-white">SMTP</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">SMTP</h1>
         <p className="mt-1 text-sm text-slate-500">
           Configuração de envio de e-mail para os alertas (atualização suspeita e sistema fora do ar).
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="panel flex max-w-xl flex-col gap-4 p-6">
-        <div className="flex items-center gap-2 text-slate-300">
+        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
           <Mail size={16} />
           <h2 className="font-semibold">Servidor de e-mail</h2>
         </div>
@@ -121,7 +121,7 @@ export default function SmtpAdmin() {
             />
           </div>
           <div>
-            <label className="label">Senha {hasPassword && <span className="text-slate-600">(já configurada)</span>}</label>
+            <label className="label">Senha {hasPassword && <span className="text-slate-500 dark:text-slate-600">(já configurada)</span>}</label>
             <input
               type="password"
               className="input"
@@ -142,27 +142,27 @@ export default function SmtpAdmin() {
           />
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-white/20 bg-white/5"
+            className="h-4 w-4 rounded border-slate-900/20 bg-slate-900/5 dark:border-white/20 dark:bg-white/5"
             checked={form.secure}
             onChange={(e) => setForm({ ...form, secure: e.target.checked })}
           />
           Usar SSL/TLS direto (porta 465). Deixe desmarcado para STARTTLS (porta 587, mais comum).
         </label>
 
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-white/20 bg-white/5"
+            className="h-4 w-4 rounded border-slate-900/20 bg-slate-900/5 dark:border-white/20 dark:bg-white/5"
             checked={form.enabled}
             onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
           />
           Habilitar envio de alertas por e-mail
         </label>
 
-        {error && <p className="text-sm text-rose-400">{error}</p>}
+        {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
 
         <button type="submit" disabled={saving} className="btn-primary mt-1 w-full">
           {saving && <Loader2 size={16} className="animate-spin" />}
@@ -171,7 +171,7 @@ export default function SmtpAdmin() {
       </form>
 
       <div className="panel mt-6 max-w-xl p-6">
-        <div className="mb-3 flex items-center gap-2 text-slate-300">
+        <div className="mb-3 flex items-center gap-2 text-slate-700 dark:text-slate-300">
           <Send size={16} />
           <h2 className="font-semibold">Enviar e-mail de teste</h2>
         </div>

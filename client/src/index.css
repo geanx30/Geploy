@@ -11,18 +11,40 @@
   body {
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     background-image:
+      radial-gradient(60rem 40rem at 90% -10%, rgba(56, 99, 245, 0.08), transparent 60%),
+      radial-gradient(50rem 35rem at -10% 20%, rgba(124, 58, 237, 0.06), transparent 55%);
+    background-attachment: fixed;
+  }
+  html.dark body {
+    background-image:
       radial-gradient(60rem 40rem at 90% -10%, rgba(56, 99, 245, 0.16), transparent 60%),
       radial-gradient(50rem 35rem at -10% 20%, rgba(124, 58, 237, 0.12), transparent 55%);
-    background-attachment: fixed;
   }
   ::selection {
     background: rgba(56, 99, 245, 0.35);
+  }
+
+  /* Sem isso, o dropdown nativo do <select> (e outros controles do SO, como
+     o seletor de data) renderiza sempre no esquema de cor do navegador,
+     ignorando nosso tema. */
+  select,
+  select option {
+    color-scheme: light;
+    background-color: #ffffff;
+    color: #0f172a;
+  }
+  html.dark select,
+  html.dark select option {
+    color-scheme: dark;
+    background-color: #0f172a;
+    color: #f1f5f9;
   }
 }
 
 @layer components {
   .panel {
-    @apply rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm shadow-soft;
+    @apply rounded-2xl border border-slate-900/10 bg-white shadow-soft;
+    @apply dark:border-white/10 dark:bg-white/[0.03] dark:backdrop-blur-sm;
   }
 
   .btn {
@@ -33,42 +55,63 @@
     @apply btn bg-gradient-to-b from-brand-400 to-brand-600 text-white shadow-glow hover:brightness-110;
   }
   .btn-secondary {
-    @apply btn bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10;
+    @apply btn border border-slate-900/10 bg-slate-900/5 text-slate-700 hover:bg-slate-900/10;
+    @apply dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10;
   }
   .btn-danger {
-    @apply btn bg-rose-500/10 text-rose-300 border border-rose-500/20 hover:bg-rose-500/20;
+    @apply btn border border-rose-600/20 bg-rose-600/10 text-rose-600 hover:bg-rose-600/20;
+    @apply dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-slate-400 hover:text-slate-100 hover:bg-white/5;
+    @apply btn bg-transparent text-slate-500 hover:bg-slate-900/5 hover:text-slate-900;
+    @apply dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100;
   }
 
   .input {
-    @apply w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm text-slate-100
-      placeholder:text-slate-500 outline-none transition focus:border-brand-400/60 focus:bg-white/[0.06]
+    @apply w-full rounded-xl border border-slate-900/10 bg-white px-3.5 py-2.5 text-sm text-slate-900
+      placeholder:text-slate-400 outline-none transition focus:border-brand-500/60 focus:bg-slate-50
       focus:ring-2 focus:ring-brand-500/20;
+    @apply dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-100 dark:placeholder:text-slate-500
+      dark:focus:border-brand-400/60 dark:focus:bg-white/[0.06];
   }
   .label {
-    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400;
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400;
   }
 
   .badge {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
   }
   .badge-ok {
-    @apply badge bg-emerald-500/10 text-emerald-300 ring-1 ring-inset ring-emerald-500/20;
+    @apply badge bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-600/20;
+    @apply dark:text-emerald-300 dark:ring-emerald-500/20;
   }
   .badge-off {
-    @apply badge bg-slate-500/10 text-slate-400 ring-1 ring-inset ring-slate-500/20;
+    @apply badge bg-slate-500/10 text-slate-600 ring-1 ring-inset ring-slate-500/20 dark:text-slate-400;
   }
   .badge-err {
-    @apply badge bg-rose-500/10 text-rose-300 ring-1 ring-inset ring-rose-500/20;
+    @apply badge bg-rose-500/10 text-rose-700 ring-1 ring-inset ring-rose-600/20;
+    @apply dark:text-rose-300 dark:ring-rose-500/20;
   }
   .badge-pending {
-    @apply badge bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20;
+    @apply badge bg-amber-500/10 text-amber-700 ring-1 ring-inset ring-amber-600/20;
+    @apply dark:text-amber-300 dark:ring-amber-500/20;
   }
 
   .dot {
     @apply h-1.5 w-1.5 rounded-full;
+  }
+
+  .alert-error {
+    @apply flex items-center gap-2 rounded-xl border border-rose-600/20 bg-rose-600/10 px-3 py-2 text-sm text-rose-600;
+    @apply dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300;
+  }
+  .alert-success {
+    @apply flex items-center gap-2 rounded-xl border border-emerald-600/20 bg-emerald-600/10 px-3.5 py-2.5 text-sm text-emerald-700;
+    @apply dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300;
+  }
+  .alert-warning {
+    @apply flex items-center gap-2 rounded-xl border border-amber-600/20 bg-amber-600/10 px-3.5 py-2.5 text-sm text-amber-700;
+    @apply dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300;
   }
 }
 

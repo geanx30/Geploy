@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Play, Square, RotateCw, Server, Globe, FolderGit2, ExternalLink } from 'lucide-react';
+import { RefreshCw, Play, Square, RotateCw, Server, Globe, FolderGit2, ExternalLink, KeyRound } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext.jsx';
 import StatusBadge from './StatusBadge.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import UpdateCommandsModal from './UpdateCommandsModal.jsx';
+import GitCredentialsModal from './GitCredentialsModal.jsx';
 import { useToast } from './Toast.jsx';
 
 function AddressLink({ address }) {
@@ -14,7 +15,7 @@ function AddressLink({ address }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center gap-1 truncate rounded-lg border border-white/10 bg-white/[0.02] px-2.5 py-1 text-[11px] text-brand-300 hover:bg-white/[0.06] hover:text-brand-200"
+      className="flex items-center gap-1 truncate rounded-lg border border-slate-900/10 bg-slate-900/[0.02] px-2.5 py-1 text-[11px] text-brand-600 hover:bg-slate-900/[0.06] hover:text-brand-700 dark:border-white/10 dark:bg-white/[0.02] dark:text-brand-300 dark:hover:bg-white/[0.06] dark:hover:text-brand-200"
       title={address}
     >
       <ExternalLink size={11} className="shrink-0" />
@@ -40,6 +41,8 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
   const [updateCommandsDraft, setUpdateCommandsDraft] = useState('');
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [needsGitToken, setNeedsGitToken] = useState(system.needs_git_token);
+  const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
 
   async function refreshStatus() {
     setStatus('checking');
@@ -100,6 +103,10 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
 
   function handleAction(action, label) {
     if (action === 'update') {
+      if (needsGitToken) {
+        setCredentialsModalOpen(true);
+        return;
+      }
       setUpdateCommandsDraft(system.post_update_commands || '');
       setUpdateModalOpen(true);
       loadPreview();
@@ -124,14 +131,14 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold text-slate-100">{system.name}</h3>
+            <h3 className="truncate font-semibold text-slate-900 dark:text-slate-100">{system.name}</h3>
           </div>
           <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
             <ProcessIcon size={13} />
             <span>{system.process_type === 'iis_site' ? 'Site IIS' : 'Serviço Windows'}</span>
             {ownerLabel && (
               <>
-                <span className="text-slate-700">•</span>
+                <span className="text-slate-400 dark:text-slate-700">•</span>
                 <span>{ownerLabel}</span>
               </>
             )}
@@ -140,7 +147,7 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
         <StatusBadge status={status} />
       </div>
 
-      <div className="flex items-center gap-1.5 truncate rounded-lg bg-black/20 px-2.5 py-1.5 text-[11px] text-slate-500">
+      <div className="flex items-center gap-1.5 truncate rounded-lg bg-slate-900/5 px-2.5 py-1.5 text-[11px] text-slate-500 dark:bg-black/20">
         <FolderGit2 size={13} className="shrink-0" />
         <span className="mono truncate">{system.repo_path}</span>
       </div>
@@ -152,14 +159,25 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
         </div>
       )}
 
+      {needsGitToken && (
+        <div className="flex items-center gap-1.5 rounded-lg border border-amber-600/20 bg-amber-600/10 px-2.5 py-1.5 text-[11px] text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+          <KeyRound size={12} className="shrink-0" />
+          Falta configurar seu token de acesso ao repositório
+        </div>
+      )}
+
       <div className="mt-auto flex items-center gap-1.5 pt-1">
         <button
-          className="btn-primary min-w-0 flex-1 !px-3"
+          className={needsGitToken ? 'btn-secondary min-w-0 flex-1 !border-amber-600/30 !text-amber-700 dark:!border-amber-500/30 dark:!text-amber-300 !px-3' : 'btn-primary min-w-0 flex-1 !px-3'}
           disabled={Boolean(busyAction)}
           onClick={() => handleAction('update', 'Atualização')}
         >
-          <RefreshCw size={15} className={`shrink-0 ${busyAction === 'update' ? 'animate-spin' : ''}`} />
-          <span className="truncate">Atualizar</span>
+          {needsGitToken ? (
+            <KeyRound size={15} className="shrink-0" />
+          ) : (
+            <RefreshCw size={15} className={`shrink-0 ${busyAction === 'update' ? 'animate-spin' : ''}`} />
+          )}
+          <span className="truncate">{needsGitToken ? 'Configurar token' : 'Atualizar'}</span>
         </button>
         <button
           className="btn-secondary shrink-0 !px-2.5"
@@ -186,6 +204,18 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
           <RotateCw size={15} />
         </button>
       </div>
+
+      <GitCredentialsModal
+        open={credentialsModalOpen}
+        systemId={system.id}
+        systemName={system.name}
+        onCancel={() => setCredentialsModalOpen(false)}
+        onSaved={() => {
+          setCredentialsModalOpen(false);
+          setNeedsGitToken(false);
+          push('Token configurado. Já pode atualizar o sistema.', 'success');
+        }}
+      />
 
       <UpdateCommandsModal
         open={updateModalOpen}

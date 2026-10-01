@@ -106,7 +106,7 @@ export default function SystemsAdmin() {
     <div>
       <div className="mb-7 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Sistemas</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Sistemas</h1>
           <p className="mt-1 text-sm text-slate-500">Cadastre os sistemas e vincule cada um ao seu dono.</p>
         </div>
         <button className="btn-primary" onClick={openCreate}>
@@ -118,7 +118,7 @@ export default function SystemsAdmin() {
       <div className="panel overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-white/10 text-xs uppercase tracking-wide text-slate-500">
+            <tr className="border-b border-slate-900/10 text-xs uppercase tracking-wide text-slate-500 dark:border-white/10">
               <th className="px-5 py-3 font-medium">Nome</th>
               <th className="px-5 py-3 font-medium">Dono</th>
               <th className="px-5 py-3 font-medium">Tipo</th>
@@ -126,12 +126,12 @@ export default function SystemsAdmin() {
               <th className="px-5 py-3 font-medium text-right">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-slate-900/5 dark:divide-white/5">
             {!loading &&
               systems.map((s) => (
-                <tr key={s.id} className="transition hover:bg-white/[0.02]">
-                  <td className="px-5 py-3 font-medium text-slate-200">{s.name}</td>
-                  <td className="px-5 py-3 text-slate-400">{s.owner_username}</td>
+                <tr key={s.id} className="transition hover:bg-slate-900/[0.02] dark:hover:bg-white/[0.02]">
+                  <td className="px-5 py-3 font-medium text-slate-900 dark:text-slate-200">{s.name}</td>
+                  <td className="px-5 py-3 text-slate-500 dark:text-slate-400">{s.owner_username}</td>
                   <td className="px-5 py-3">
                     <span className="badge-off">
                       {s.process_type === 'iis_site' ? <Globe size={12} /> : <Server size={12} />}
@@ -147,7 +147,7 @@ export default function SystemsAdmin() {
                         <Pencil size={15} />
                       </button>
                       <button
-                        className="btn-ghost !px-2.5 hover:!text-rose-300"
+                        className="btn-ghost !px-2.5 hover:!text-rose-600 dark:hover:!text-rose-300"
                         title="Remover"
                         onClick={() => setDeleteTarget(s)}
                       >
@@ -279,8 +279,8 @@ export default function SystemsAdmin() {
             </div>
           )}
 
-          <div className="rounded-xl border border-white/10 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+          <div className="rounded-xl border border-slate-900/10 p-4 dark:border-white/10">
+            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
               <KeyRound size={14} />
               Credencial do Git
             </div>
@@ -310,11 +310,15 @@ export default function SystemsAdmin() {
                   <input
                     type="password"
                     className="input"
-                    placeholder={modal?.mode === 'edit' ? 'Deixe em branco para manter' : ''}
+                    placeholder={modal?.mode === 'edit' ? 'Deixe em branco para manter' : 'opcional'}
                     value={form.git_token}
                     onChange={(e) => setForm({ ...form, git_token: e.target.value })}
                   />
                 </div>
+                <p className="col-span-2 text-xs text-slate-500">
+                  Se deixar o token em branco, o dono do sistema será obrigado a cadastrar o próprio token (na tela
+                  dele) antes de conseguir atualizar.
+                </p>
               </div>
             )}
 
@@ -348,7 +352,7 @@ export default function SystemsAdmin() {
             </p>
           </div>
 
-          {error && <p className="text-sm text-rose-400">{error}</p>}
+          {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
 
           <div className="mt-1 flex justify-end gap-2">
             <button type="button" className="btn-secondary" onClick={() => setModal(null)}>

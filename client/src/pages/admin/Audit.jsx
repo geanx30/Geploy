@@ -7,6 +7,12 @@ const ACTION_LABELS = {
   start: 'Iniciar',
   stop: 'Parar',
   restart: 'Reiniciar',
+  'file-edit': 'Edição de arquivo',
+  'git-credentials-set': 'Token configurado',
+  'git-credentials-removed': 'Token removido',
+  'update-requested': 'Atualização pedida',
+  'update-approved': 'Atualização aprovada',
+  'update-rejected': 'Atualização rejeitada',
 };
 
 export default function AuditAdmin() {

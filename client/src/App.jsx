@@ -4,6 +4,7 @@ import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Account from './pages/Account.jsx';
+import FileManager from './pages/FileManager.jsx';
 import ChangePasswordRequired from './pages/ChangePasswordRequired.jsx';
 import UsersAdmin from './pages/admin/Users.jsx';
 import SystemsAdmin from './pages/admin/Systems.jsx';
@@ -45,6 +46,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/account" element={<Account />} />
+                <Route path="/systems/:id/files" element={<FileManager />} />
                 <Route
                   path="/admin/users"
                   element={

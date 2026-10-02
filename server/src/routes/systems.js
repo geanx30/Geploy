@@ -8,6 +8,7 @@ const { performAction } = require('../services/processControl');
 const { logAction } = require('../audit');
 const { sendRiskAlert } = require('../services/alerts');
 const { encrypt } = require('../crypto');
+const files = require('../services/fileManager');
 
 const router = express.Router();
 router.use(requireAuth, requirePasswordChanged);
@@ -65,6 +66,53 @@ router.get('/:id/audit', loadSystemAndCheckOwnership, (req, res) => {
     .all(req.system.id);
   res.json(rows);
 });
+
+// ---------- Arquivos da pasta do sistema ----------
+// O caminho de cada sistema vem do cadastro; o que o cliente manda e so o caminho
+// RELATIVO, validado em services/fileManager (nada fora da pasta, sem .git/node_modules).
+
+function fileRoute(handler) {
+  return (req, res) => {
+    try {
+      res.json(handler(req));
+    } catch (err) {
+      if (err instanceof files.FileError) return res.status(err.status).json({ error: err.message });
+      console.error('Erro no gerenciador de arquivos:', err);
+      res.status(500).json({ error: 'Erro ao acessar o arquivo.' });
+    }
+  };
+}
+
+router.get('/:id/files', loadSystemAndCheckOwnership, fileRoute((req) => files.listDir(req.system, req.query.path)));
+
+router.get('/:id/file', loadSystemAndCheckOwnership, fileRoute((req) => files.readFile(req.system, req.query.path)));
+
+router.get('/:id/file-backups', loadSystemAndCheckOwnership, fileRoute((req) => files.listBackups(req.system, req.query.path)));
+
+router.get(
+  '/:id/file-backup',
+  loadSystemAndCheckOwnership,
+  fileRoute((req) => files.readBackup(req.system, req.query.path, req.query.id))
+);
+
+router.put(
+  '/:id/file',
+  loadSystemAndCheckOwnership,
+  fileRoute((req) => {
+    const { path: relPath, content, expected_mtime } = req.body || {};
+    const result = files.writeFile(req.system, relPath, content, expected_mtime);
+
+    // Nunca registra o conteudo (pode ter segredos de .env), so quem editou e o que.
+    logAction({
+      userId: req.user.sub,
+      systemId: req.system.id,
+      action: 'file-edit',
+      success: true,
+      output: `Editou ${result.path} (${result.size} bytes)`,
+    });
+    return result;
+  })
+);
 
 router.put('/:id/git-credentials', loadSystemAndCheckOwnership, (req, res) => {
   const { git_username, git_token } = req.body || {};

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Play, Square, RotateCw, Server, Globe, FolderGit2, ExternalLink, KeyRound, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { RefreshCw, Play, Square, RotateCw, Server, Globe, FolderGit2, ExternalLink, KeyRound, Trash2, FolderOpen } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext.jsx';
 import StatusBadge from './StatusBadge.jsx';
@@ -165,9 +166,17 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
         <StatusBadge status={status} />
       </div>
 
-      <div className="flex items-center gap-1.5 truncate rounded-lg bg-slate-900/5 px-2.5 py-1.5 text-[11px] text-slate-500 dark:bg-black/20">
+      <div className="flex items-center gap-1.5 rounded-lg bg-slate-900/5 px-2.5 py-1.5 text-[11px] text-slate-500 dark:bg-black/20">
         <FolderGit2 size={13} className="shrink-0" />
-        <span className="mono truncate">{system.repo_path}</span>
+        <span className="mono min-w-0 flex-1 truncate">{system.repo_path}</span>
+        <Link
+          to={`/systems/${system.id}/files`}
+          title="Abrir e editar arquivos do sistema"
+          className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-brand-600 hover:bg-slate-900/5 dark:text-brand-300 dark:hover:bg-white/10"
+        >
+          <FolderOpen size={12} />
+          Arquivos
+        </Link>
       </div>
 
       {(system.access_url || system.public_url) && (

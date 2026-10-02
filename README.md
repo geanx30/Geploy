@@ -105,6 +105,17 @@ Tela **Sistemas → Novo sistema**:
 - **Comandos pós-atualização (opcional)**: um comando por linha, executado nessa ordem na pasta do repositório logo após o `git pull` ter sucesso (ex.: `npm install`, `npm run build`, `node scripts/init-db.js`). Para na primeira falha. Esses são os comandos "de base" do sistema.
 - **Endereço interno / DNS público (opcional)**: onde o sistema roda (ex.: `vm-sistemas:3000`) e/ou o domínio público (ex.: `gcontrol.grupogadens.com.br`). Aparecem como links clicáveis no card, para quem for acessar o sistema não precisar perguntar.
 
+## Editando arquivos do sistema
+
+O link **Arquivos** no card abre um navegador da pasta do sistema com editor de texto (para ajustar `.env`, configs etc.). Dono e admins podem usar, cada um só nos sistemas que acessa.
+
+- Só enxerga/edita dentro da pasta cadastrada do sistema: `..`, caminhos absolutos, atalhos/junctions que apontam para fora, nomes curtos 8.3 e streams NTFS são bloqueados (validação em `server/src/services/fileManager.js`).
+- `.git` e `node_modules` ficam ocultos e inacessíveis. Só arquivos de texto de até 1 MB; binários não abrem.
+- Cada salvamento guarda a versão anterior (últimas 20 por arquivo, em `data/file-backups/`, fora da pasta do sistema) e aparece em "Versões anteriores" no editor. Carregar uma versão antiga só preenche o editor; vale quando salvar.
+- Preserva as quebras de linha originais (CRLF/LF) e recusa salvar se o arquivo mudou no disco depois de aberto.
+- A auditoria registra quem editou qual arquivo, nunca o conteúdo (pode ter segredos).
+- Editar o `.env` não reinicia o sistema: a mudança só vale depois de reiniciar o serviço.
+
 ## Atualizando um sistema (como dono)
 
 Ao clicar em **Atualizar** no card do sistema, o Geploy primeiro faz um `git fetch` + `diff` (sem alterar nada ainda) e mostra: o que vai mudar (diff/arquivos) e os comandos pós-atualização já configurados pelo admin (se houver) — o dono pode **ajustá-los só para aquela execução** (não altera o cadastro permanente).

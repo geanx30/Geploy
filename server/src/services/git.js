@@ -3,8 +3,16 @@ const fs = require('node:fs');
 const { decrypt } = require('../crypto');
 
 function run(cmd, args, options) {
+  // O servico roda como SYSTEM e as pastas dos sistemas pertencem a outros
+  // usuarios; sem isso o git recusa ("dubious ownership"). O cwd vem sempre do
+  // cadastro do sistema, e -c e uma das fontes de config que o git respeita.
+  const finalArgs =
+    cmd === 'git' && options?.cwd
+      ? ['-c', `safe.directory=${options.cwd.replace(/\\/g, '/')}`, ...args]
+      : args;
+
   return new Promise((resolve) => {
-    execFile(cmd, args, { timeout: 2 * 60 * 1000, ...options }, (error, stdout, stderr) => {
+    execFile(cmd, finalArgs, { timeout: 2 * 60 * 1000, ...options }, (error, stdout, stderr) => {
       resolve({
         success: !error,
         code: error?.code ?? 0,

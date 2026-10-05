@@ -116,6 +116,7 @@ O link **Arquivos** no card abre um navegador da pasta do sistema com editor de 
 - A auditoria registra quem editou qual arquivo, nunca o conteúdo (pode ter segredos).
 - Editar o `.env` não reinicia o sistema: a mudança só vale depois de reiniciar o serviço.
 - **Upload de arquivos**: botão "Enviar arquivo" ou arrastar e soltar, na pasta aberta. Útil para arquivos que não vêm do GitHub (banco de dados, `.env` pronto). Streaming direto pro disco (sem limite de memória), com barra de progresso; limite de tamanho configurável via `MAX_UPLOAD_MB` no `.env` (padrão 500 MB). Se já existir um arquivo com o mesmo nome, pede confirmação antes de substituir — e a versão antiga também vira backup.
+- **Baixar e excluir**: ícones de baixar e excluir aparecem ao passar o mouse sobre cada arquivo da lista (e na barra do editor, quando o arquivo está aberto). Baixar funciona para qualquer tipo/tamanho de arquivo (não passa pelas restrições do editor). Excluir só vale para arquivos — pastas inteiras não podem ser apagadas pelo painel — e guarda uma cópia em backup antes, igual ao editor.
 
 ## Atualizando um sistema (como dono)
 

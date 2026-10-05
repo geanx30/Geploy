@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('node:fs');
 const db = require('../db');
 const { requireAuth, requirePasswordChanged } = require('../auth');
 const { loadSystemAndCheckOwnership } = require('../middleware/loadSystem');
@@ -93,6 +94,37 @@ router.get(
   '/:id/file-backup',
   loadSystemAndCheckOwnership,
   fileRoute((req) => files.readBackup(req.system, req.query.path, req.query.id))
+);
+
+router.get('/:id/file-download', loadSystemAndCheckOwnership, (req, res) => {
+  try {
+    const { real, name } = files.resolveDownload(req.system, req.query.path);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(name)}`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    const stream = fs.createReadStream(real);
+    stream.on('error', () => res.destroy());
+    stream.pipe(res);
+  } catch (err) {
+    if (err instanceof files.FileError) return res.status(err.status).json({ error: err.message });
+    console.error('Erro no download de arquivo:', err);
+    res.status(500).json({ error: 'Erro ao baixar o arquivo.' });
+  }
+});
+
+router.delete(
+  '/:id/file',
+  loadSystemAndCheckOwnership,
+  fileRoute((req) => {
+    const result = files.deleteFile(req.system, req.query.path);
+    logAction({
+      userId: req.user.sub,
+      systemId: req.system.id,
+      action: 'file-delete',
+      success: true,
+      output: `Excluiu ${result.path}`,
+    });
+    return result;
+  })
 );
 
 router.put(

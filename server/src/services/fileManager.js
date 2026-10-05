@@ -121,6 +121,17 @@ function isBinary(buffer) {
   return buffer.subarray(0, 8000).includes(0);
 }
 
+/**
+ * Resolve um arquivo para download: mesmas checagens de caminho do resto do
+ * modulo, mas sem limite de tamanho nem bloqueio de binario (ao contrario do
+ * editor, aqui o conteudo nunca entra na memoria do servidor).
+ */
+function resolveDownload(system, rel) {
+  const { real, relPath } = resolveWithin(system, rel);
+  if (!fs.statSync(real).isFile()) throw new FileError(400, 'Não é um arquivo.');
+  return { real, relPath, name: path.basename(relPath) };
+}
+
 function readFile(system, rel) {
   const { real, relPath } = resolveWithin(system, rel);
   const stat = fs.statSync(real);
@@ -179,6 +190,28 @@ function writeFile(system, rel, content, expectedMtime) {
 }
 
 /**
+ * Apaga um arquivo (nunca uma pasta, de proposito — exclusao de pasta inteira
+ * fica fora do escopo do painel). Guarda uma copia em backup antes, igual ao
+ * editor, para poder recuperar.
+ */
+function deleteFile(system, rel) {
+  const { real, relPath } = resolveWithin(system, rel);
+  const stat = fs.statSync(real);
+  if (!stat.isFile()) throw new FileError(400, 'Só é possível excluir arquivos, não pastas.');
+
+  if (stat.size <= MAX_BACKUP_BYTES) {
+    try {
+      backupFile(system, relPath, real);
+    } catch {
+      // backup e um "melhor esforco": nao bloqueia a exclusao se falhar
+    }
+  }
+
+  fs.unlinkSync(real);
+  return { path: relPath };
+}
+
+/**
  * Recebe um upload em streaming (sem carregar na memoria) e grava com
  * escrita-em-temp + rename atomico (mesma pasta, mesmo volume). Se o destino
  * ja existir, so sobrescreve com `overwrite: true` (o chamador confirma antes).
@@ -233,7 +266,9 @@ async function uploadFile(system, rel, readable, { overwrite } = {}) {
 }
 
 function listBackups(system, rel) {
-  const { relPath } = resolveWithin(system, rel);
+  // resolveForUpload (nao resolveWithin): o arquivo pode ter sido excluido, mas
+  // o backup continua la e precisa ficar consultavel mesmo assim.
+  const { relPath } = resolveForUpload(system, rel);
   const dir = backupDirFor(system, relPath);
   if (!fs.existsSync(dir)) return [];
 
@@ -249,7 +284,7 @@ function listBackups(system, rel) {
 }
 
 function readBackup(system, rel, id) {
-  const { relPath } = resolveWithin(system, rel);
+  const { relPath } = resolveForUpload(system, rel);
   const dir = backupDirFor(system, relPath);
   // So le arquivos que existem na listagem da pasta de backup (id nunca vira caminho).
   const exists = fs.existsSync(dir) && fs.readdirSync(dir).includes(String(id));
@@ -263,6 +298,8 @@ module.exports = {
   readFile,
   writeFile,
   uploadFile,
+  deleteFile,
+  resolveDownload,
   listBackups,
   readBackup,
   MAX_FILE_BYTES,

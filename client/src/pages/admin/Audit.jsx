@@ -8,6 +8,8 @@ const ACTION_LABELS = {
   stop: 'Parar',
   restart: 'Reiniciar',
   'file-edit': 'Edição de arquivo',
+  'file-upload': 'Upload de arquivo',
+  'file-delete': 'Exclusão de arquivo',
   'git-credentials-set': 'Token configurado',
   'git-credentials-removed': 'Token removido',
   'update-requested': 'Atualização pedida',

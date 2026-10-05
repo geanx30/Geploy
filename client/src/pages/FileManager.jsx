@@ -10,6 +10,8 @@ import {
   Loader2,
   Save,
   Upload,
+  Download,
+  Trash2,
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
@@ -45,6 +47,8 @@ export default function FileManager() {
   const [saving, setSaving] = useState(false);
   const [backups, setBackups] = useState([]);
   const [pendingNav, setPendingNav] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fileInputRef = useRef(null);
   const [uploads, setUploads] = useState([]);
@@ -200,6 +204,24 @@ export default function FileManager() {
     xhr.send(fileObj);
   }
 
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.del(`/systems/${id}/file?path=${enc(deleteTarget)}`);
+      push(`${deleteTarget.split('/').pop()} excluído.`, 'success');
+      refreshListing();
+      if (file === deleteTarget) {
+        setSearchParams({ dir });
+      }
+    } catch (err) {
+      push(err.message, 'error');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  }
+
   function handleFiles(fileList) {
     for (const fileObj of fileList) {
       startUpload(fileObj, dir ? `${dir}/${fileObj.name}` : fileObj.name, false);
@@ -336,23 +358,45 @@ export default function FileManager() {
                 const full = joinPath(e.name);
                 const active = e.type === 'file' && full === file;
                 return (
-                  <button
+                  <div
                     key={e.name}
-                    onClick={() => (e.type === 'dir' ? navigate({ dir: full }) : navigate({ dir, file: full }))}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ${
+                    className={`group flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
                       active
                         ? 'bg-brand-500/10 text-brand-700 dark:text-brand-300'
                         : 'text-slate-700 hover:bg-slate-900/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.05]'
                     }`}
                   >
-                    {e.type === 'dir' ? (
-                      <Folder size={14} className="shrink-0 text-amber-500" />
-                    ) : (
-                      <FileText size={14} className="shrink-0 text-slate-400" />
+                    <button
+                      onClick={() => (e.type === 'dir' ? navigate({ dir: full }) : navigate({ dir, file: full }))}
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    >
+                      {e.type === 'dir' ? (
+                        <Folder size={14} className="shrink-0 text-amber-500" />
+                      ) : (
+                        <FileText size={14} className="shrink-0 text-slate-400" />
+                      )}
+                      <span className="mono min-w-0 flex-1 truncate text-[13px]">{e.name}</span>
+                    </button>
+                    {e.type === 'file' && (
+                      <>
+                        <span className="shrink-0 text-[11px] text-slate-400 group-hover:hidden">{formatSize(e.size)}</span>
+                        <a
+                          href={`/api/systems/${id}/file-download?path=${enc(full)}`}
+                          title="Baixar"
+                          className="hidden shrink-0 rounded p-1 text-slate-400 hover:text-brand-600 group-hover:block dark:hover:text-brand-300"
+                        >
+                          <Download size={13} />
+                        </a>
+                        <button
+                          onClick={() => setDeleteTarget(full)}
+                          title="Excluir"
+                          className="hidden shrink-0 rounded p-1 text-slate-400 hover:text-rose-600 group-hover:block dark:hover:text-rose-300"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
                     )}
-                    <span className="mono min-w-0 flex-1 truncate text-[13px]">{e.name}</span>
-                    {e.type === 'file' && <span className="shrink-0 text-[11px] text-slate-400">{formatSize(e.size)}</span>}
-                  </button>
+                  </div>
                 );
               })}
 
@@ -395,6 +439,16 @@ export default function FileManager() {
                   </label>
                 )}
 
+                <a
+                  href={`/api/systems/${id}/file-download?path=${enc(file)}`}
+                  title="Baixar"
+                  className="btn-secondary !py-1.5"
+                >
+                  <Download size={14} />
+                </a>
+                <button title="Excluir" className="btn-secondary !py-1.5" onClick={() => setDeleteTarget(file)}>
+                  <Trash2 size={14} />
+                </button>
                 <button className="btn-primary !py-1.5" disabled={!dirty || saving} onClick={save}>
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   Salvar
@@ -431,6 +485,15 @@ export default function FileManager() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={`Excluir "${deleteTarget?.split('/').pop()}"?`}
+        message="Uma cópia fica guardada como backup antes de apagar, mas o arquivo some da pasta imediatamente. Esta ação não pode ser desfeita pelo painel."
+        confirmLabel={deleting ? 'Excluindo...' : 'Excluir'}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
 
       <ConfirmDialog
         open={Boolean(uploadConflict)}

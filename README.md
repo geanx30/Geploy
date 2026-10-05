@@ -115,6 +115,7 @@ O link **Arquivos** no card abre um navegador da pasta do sistema com editor de 
 - Preserva as quebras de linha originais (CRLF/LF) e recusa salvar se o arquivo mudou no disco depois de aberto.
 - A auditoria registra quem editou qual arquivo, nunca o conteúdo (pode ter segredos).
 - Editar o `.env` não reinicia o sistema: a mudança só vale depois de reiniciar o serviço.
+- **Upload de arquivos**: botão "Enviar arquivo" ou arrastar e soltar, na pasta aberta. Útil para arquivos que não vêm do GitHub (banco de dados, `.env` pronto). Streaming direto pro disco (sem limite de memória), com barra de progresso; limite de tamanho configurável via `MAX_UPLOAD_MB` no `.env` (padrão 500 MB). Se já existir um arquivo com o mesmo nome, pede confirmação antes de substituir — e a versão antiga também vira backup.
 
 ## Atualizando um sistema (como dono)
 

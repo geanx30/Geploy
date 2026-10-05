@@ -114,6 +114,27 @@ router.put(
   })
 );
 
+router.put('/:id/file-upload', loadSystemAndCheckOwnership, async (req, res) => {
+  const { path: relPath, overwrite } = req.query;
+  try {
+    const result = await files.uploadFile(req.system, relPath, req, { overwrite: overwrite === '1' });
+    logAction({
+      userId: req.user.sub,
+      systemId: req.system.id,
+      action: 'file-upload',
+      success: true,
+      output: `${result.overwritten ? 'Substituiu' : 'Enviou'} ${result.path} (${result.size} bytes)`,
+    });
+    res.json(result);
+  } catch (err) {
+    if (err instanceof files.FileError) {
+      return res.status(err.status).json({ error: err.message, code: err.code });
+    }
+    console.error('Erro no upload de arquivo:', err);
+    res.status(500).json({ error: 'Erro ao enviar o arquivo.' });
+  }
+});
+
 router.put('/:id/git-credentials', loadSystemAndCheckOwnership, (req, res) => {
   const { git_username, git_token } = req.body || {};
   if (!git_token) {

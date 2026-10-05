@@ -1,8 +1,13 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { Transform } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
 
 const MAX_FILE_BYTES = 1024 * 1024;
+const MAX_UPLOAD_BYTES = (Number(process.env.MAX_UPLOAD_MB) || 500) * 1024 * 1024;
+// Acima disso, sobrescrever por upload nao guarda copia (evita encher o disco com bancos grandes).
+const MAX_BACKUP_BYTES = 50 * 1024 * 1024;
 const BACKUPS_TO_KEEP = 20;
 const BLOCKED_NAMES = new Set(['.git', 'node_modules']);
 const RESERVED_NAMES = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
@@ -67,6 +72,24 @@ function resolveWithin(system, rel) {
   if (relParts.some((p) => BLOCKED_NAMES.has(p.toLowerCase()))) throw blockedError();
 
   return { real, relPath: relParts.join('/') };
+}
+
+/**
+ * Como resolveWithin, mas para um arquivo que pode ainda nao existir (upload):
+ * exige que a PASTA onde ele vai ficar exista dentro do sistema; o nome do
+ * arquivo em si passa pelas mesmas checagens (sem precisar existir no disco).
+ */
+function resolveForUpload(system, rel) {
+  const parts = cleanParts(rel);
+  if (parts.length === 0) throw new FileError(400, 'Informe o nome do arquivo.');
+  const fileName = parts[parts.length - 1];
+
+  const { real: realDir, relPath: relDir } = resolveWithin(system, parts.slice(0, -1).join('/'));
+  if (!fs.statSync(realDir).isDirectory()) throw new FileError(400, 'Não é uma pasta.');
+
+  const real = path.join(realDir, fileName);
+  const relPath = relDir ? `${relDir}/${fileName}` : fileName;
+  return { real, relPath, dir: realDir };
 }
 
 function listDir(system, rel) {
@@ -155,6 +178,60 @@ function writeFile(system, rel, content, expectedMtime) {
   return { path: relPath, size: saved.size, mtime: saved.mtimeMs };
 }
 
+/**
+ * Recebe um upload em streaming (sem carregar na memoria) e grava com
+ * escrita-em-temp + rename atomico (mesma pasta, mesmo volume). Se o destino
+ * ja existir, so sobrescreve com `overwrite: true` (o chamador confirma antes).
+ */
+async function uploadFile(system, rel, readable, { overwrite } = {}) {
+  const { real, relPath, dir } = resolveForUpload(system, rel);
+
+  const exists = fs.existsSync(real);
+  if (exists) {
+    if (fs.statSync(real).isDirectory()) throw new FileError(400, 'Já existe uma pasta com esse nome.');
+    if (!overwrite) {
+      const err = new FileError(409, 'Já existe um arquivo com esse nome.');
+      err.code = 'exists';
+      throw err;
+    }
+  }
+
+  const tmp = path.join(dir, `.upload-${crypto.randomBytes(8).toString('hex')}.tmp`);
+  let written = 0;
+  const limiter = new Transform({
+    transform(chunk, _enc, cb) {
+      written += chunk.length;
+      if (written > MAX_UPLOAD_BYTES) return cb(new Error('TOO_LARGE'));
+      cb(null, chunk);
+    },
+  });
+
+  try {
+    await pipeline(readable, limiter, fs.createWriteStream(tmp));
+  } catch (err) {
+    fs.rmSync(tmp, { force: true });
+    if (err.message === 'TOO_LARGE') {
+      throw new FileError(413, `Arquivo maior que o limite de upload (${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB).`);
+    }
+    throw new FileError(400, 'Falha ao receber o arquivo (envio interrompido?).');
+  }
+
+  if (exists && overwrite) {
+    const oldSize = fs.statSync(real).size;
+    if (oldSize <= MAX_BACKUP_BYTES) {
+      try {
+        backupFile(system, relPath, real);
+      } catch {
+        // backup e um "melhor esforco": nao bloqueia o upload se falhar
+      }
+    }
+  }
+
+  fs.renameSync(tmp, real);
+  const saved = fs.statSync(real);
+  return { path: relPath, size: saved.size, mtime: saved.mtimeMs, overwritten: exists };
+}
+
 function listBackups(system, rel) {
   const { relPath } = resolveWithin(system, rel);
   const dir = backupDirFor(system, relPath);
@@ -180,4 +257,14 @@ function readBackup(system, rel, id) {
   return { content: fs.readFileSync(path.join(dir, String(id)), 'utf8') };
 }
 
-module.exports = { FileError, listDir, readFile, writeFile, listBackups, readBackup, MAX_FILE_BYTES };
+module.exports = {
+  FileError,
+  listDir,
+  readFile,
+  writeFile,
+  uploadFile,
+  listBackups,
+  readBackup,
+  MAX_FILE_BYTES,
+  MAX_UPLOAD_BYTES,
+};

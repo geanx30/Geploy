@@ -1,6 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, CornerLeftUp, FileText, Folder, History, Loader2, Save } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronRight,
+  CornerLeftUp,
+  FileText,
+  Folder,
+  History,
+  Loader2,
+  Save,
+  Upload,
+  AlertCircle,
+  CheckCircle2,
+} from 'lucide-react';
 import { api } from '../api/client';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { useToast } from '../components/Toast.jsx';
@@ -33,6 +45,11 @@ export default function FileManager() {
   const [saving, setSaving] = useState(false);
   const [backups, setBackups] = useState([]);
   const [pendingNav, setPendingNav] = useState(null);
+
+  const fileInputRef = useRef(null);
+  const [uploads, setUploads] = useState([]);
+  const [uploadConflict, setUploadConflict] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const dirty = Boolean(file) && !fileError && content !== original;
 
@@ -122,6 +139,73 @@ export default function FileManager() {
     }
   }
 
+  function refreshListing() {
+    api.get(`/systems/${id}/files?path=${enc(dir)}`).then((r) => setEntries(r.entries)).catch(() => {});
+  }
+
+  function startUpload(fileObj, relPath, overwrite) {
+    const key = `${relPath}-${Date.now()}-${Math.random()}`;
+    setUploads((u) => [...u, { key, name: fileObj.name, progress: 0, status: 'uploading' }]);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', `/api/systems/${id}/file-upload?path=${enc(relPath)}&overwrite=${overwrite ? '1' : '0'}`);
+    xhr.withCredentials = true;
+    // Evita que o Content-Type automático do navegador (ex.: application/json
+    // para um .json) caia no parser de JSON do servidor e consuma o stream.
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const progress = Math.round((e.loaded / e.total) * 100);
+      setUploads((u) => u.map((x) => (x.key === key ? { ...x, progress } : x)));
+    };
+
+    xhr.onload = () => {
+      let data = {};
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        // resposta vazia/invalida, trata como erro generico abaixo
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        setUploads((u) => u.map((x) => (x.key === key ? { ...x, status: 'done', progress: 100 } : x)));
+        push(`${fileObj.name} enviado.`, 'success');
+        refreshListing();
+        if (file === relPath) {
+          api
+            .get(`/systems/${id}/file?path=${enc(file)}`)
+            .then((r) => {
+              setOriginal(r.content);
+              setContent(r.content);
+              setMtime(r.mtime);
+            })
+            .catch(() => {});
+        }
+        setTimeout(() => setUploads((u) => u.filter((x) => x.key !== key)), 3000);
+      } else if (xhr.status === 409 && data.code === 'exists') {
+        setUploads((u) => u.filter((x) => x.key !== key));
+        setUploadConflict({ fileObj, relPath });
+      } else {
+        const message = data.error || `Erro ${xhr.status} ao enviar.`;
+        setUploads((u) => u.map((x) => (x.key === key ? { ...x, status: 'error', error: message } : x)));
+        push(message, 'error');
+      }
+    };
+
+    xhr.onerror = () => {
+      setUploads((u) => u.map((x) => (x.key === key ? { ...x, status: 'error', error: 'Falha de rede' } : x)));
+    };
+
+    xhr.send(fileObj);
+  }
+
+  function handleFiles(fileList) {
+    for (const fileObj of fileList) {
+      startUpload(fileObj, dir ? `${dir}/${fileObj.name}` : fileObj.name, false);
+    }
+  }
+
   async function loadBackup(backupId) {
     if (!backupId) return;
     try {
@@ -172,9 +256,68 @@ export default function FileManager() {
                 </button>
               </span>
             ))}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="ml-auto flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 font-medium text-brand-600 hover:bg-slate-900/5 dark:text-brand-300 dark:hover:bg-white/10"
+            >
+              <Upload size={12} />
+              Enviar arquivo
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                handleFiles(e.target.files);
+                e.target.value = '';
+              }}
+            />
           </div>
 
-          <div className="flex-1 overflow-y-auto p-1.5">
+          {uploads.length > 0 && (
+            <div className="flex flex-col gap-1.5 border-b border-slate-900/10 p-2 dark:border-white/10">
+              {uploads.map((u) => (
+                <div key={u.key} className="rounded-lg bg-slate-900/[0.03] px-2.5 py-1.5 text-[11px] dark:bg-white/[0.04]">
+                  <div className="mb-1 flex items-center gap-1.5">
+                    {u.status === 'uploading' && <Loader2 size={11} className="shrink-0 animate-spin text-brand-500" />}
+                    {u.status === 'done' && <CheckCircle2 size={11} className="shrink-0 text-emerald-500" />}
+                    {u.status === 'error' && <AlertCircle size={11} className="shrink-0 text-rose-500" />}
+                    <span className="mono min-w-0 flex-1 truncate text-slate-700 dark:text-slate-300">{u.name}</span>
+                    <span className="shrink-0 text-slate-400">
+                      {u.status === 'uploading' ? `${u.progress}%` : u.status === 'done' ? 'enviado' : 'falhou'}
+                    </span>
+                  </div>
+                  {u.status === 'uploading' && (
+                    <div className="h-1 overflow-hidden rounded-full bg-slate-900/10 dark:bg-white/10">
+                      <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${u.progress}%` }} />
+                    </div>
+                  )}
+                  {u.status === 'error' && <p className="text-rose-500">{u.error}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              handleFiles(e.dataTransfer.files);
+            }}
+            className={`flex-1 overflow-y-auto p-1.5 ${dragOver ? 'bg-brand-500/5 ring-2 ring-inset ring-brand-500/40' : ''}`}
+          >
+            {dragOver && (
+              <div className="pointer-events-none flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-brand-500/40 py-6 text-sm text-brand-600 dark:text-brand-300">
+                <Upload size={16} />
+                Solte para enviar a esta pasta
+              </div>
+            )}
             {listLoading && <p className="px-3 py-4 text-sm text-slate-500">Carregando...</p>}
             {listError && <div className="alert-error m-2">{listError}</div>}
 
@@ -288,6 +431,19 @@ export default function FileManager() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(uploadConflict)}
+        title={`Substituir "${uploadConflict?.fileObj.name}"?`}
+        message="Já existe um arquivo com esse nome nesta pasta. A versão atual é salva como backup antes de ser substituída."
+        confirmLabel="Substituir"
+        onCancel={() => setUploadConflict(null)}
+        onConfirm={() => {
+          const { fileObj, relPath } = uploadConflict;
+          setUploadConflict(null);
+          startUpload(fileObj, relPath, true);
+        }}
+      />
 
       <ConfirmDialog
         open={Boolean(pendingNav)}

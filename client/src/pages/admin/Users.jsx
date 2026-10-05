@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../utils/date.js';
 import { useEffect, useState } from 'react';
 import { Plus, KeyRound, Trash2, ShieldCheck, UserIcon } from 'lucide-react';
 import { api } from '../../api/client';
@@ -121,7 +122,7 @@ export default function UsersAdmin() {
                       {u.role === 'admin' ? 'Admin' : 'Usuário'}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-slate-500">{new Date(u.created_at).toLocaleString('pt-BR')}</td>
+                  <td className="px-5 py-3 text-slate-500">{formatDateTime(u.created_at)}</td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-1.5">
                       <button className="btn-ghost !px-2.5" title="Editar / resetar senha" onClick={() => openEdit(u)}>

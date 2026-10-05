@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../utils/date.js';
 import { Fragment, useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, ChevronDown } from 'lucide-react';
 import { api } from '../../api/client';
@@ -57,7 +58,7 @@ export default function AuditAdmin() {
                     onClick={() => setExpanded(expanded === log.id ? null : log.id)}
                   >
                     <td className="px-5 py-3 whitespace-nowrap text-slate-500">
-                      {new Date(log.created_at).toLocaleString('pt-BR')}
+                      {formatDateTime(log.created_at)}
                     </td>
                     <td className="px-5 py-3 text-slate-700 dark:text-slate-300">{log.username || '—'}</td>
                     <td className="px-5 py-3 text-slate-700 dark:text-slate-300">{log.system_name || '—'}</td>

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../utils/date.js';
 import { useEffect, useState } from 'react';
 import { ShieldAlert, Check, X, FileDiff, Inbox } from 'lucide-react';
 import { api } from '../../api/client';
@@ -76,7 +77,7 @@ export default function ApprovalsAdmin() {
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
                     Pedido por <span className="text-slate-500 dark:text-slate-400">{r.requested_by}</span> em{' '}
-                    {new Date(r.created_at).toLocaleString('pt-BR')}
+                    {formatDateTime(r.created_at)}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
@@ -147,7 +148,7 @@ export default function ApprovalsAdmin() {
                       <span className={STATUS_LABEL[r.status].cls}>{STATUS_LABEL[r.status].label}</span>
                     </td>
                     <td className="px-5 py-3 text-slate-500">
-                      {r.decided_at ? new Date(r.decided_at).toLocaleString('pt-BR') : '—'}
+                      {r.decided_at ? formatDateTime(r.decided_at) : '—'}
                     </td>
                   </tr>
                 ))}

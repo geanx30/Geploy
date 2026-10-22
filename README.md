@@ -126,21 +126,25 @@ Tela **Novo sistema** (`/admin/deploy`): em vez de preencher o cadastro manualme
 
 ### Comando que inicia o sistema (campo "Comando que inicia o sistema")
 
-É o comando literal que vira o serviço Windows via NSSM — não é um shell, então **"npm start" sozinho não funciona** (o Windows não executa `.cmd`/`.bat` diretamente como um serviço). Para projetos Node que usam `npm start`, use o `cmd.exe` como "ponte":
+Digite exatamente como você rodaria no terminal, dentro da pasta do sistema — o Geploy sempre executa por trás de um `cmd.exe /c`, então `npm start`, `npm run start:prod`, um `.exe`/`.bat` ou um comando com argumentos funcionam todos do mesmo jeito, sem precisar indicar caminho completo do `node.exe` nem nada por trás de aspas:
 
 ```
-C:\Windows\System32\cmd.exe /c "npm start"
+npm start
 ```
 
-(NSSM define a pasta de trabalho automaticamente como a pasta do sistema, então `npm start` já roda no lugar certo.) Se o projeto expõe um entrypoint direto, prefira chamar o Node diretamente — mais simples e sem a camada extra do `cmd.exe`:
+Se preferir (ou se o projeto não tiver `package.json`), também pode apontar direto para o executável:
+
+```
+C:\Program Files\nodejs\node.exe server.js
+```
+
+**Se algum caminho do comando tiver espaço** (como `C:\Program Files\...`), coloque aquela parte entre aspas — sem aspas, o espaço é interpretado como separador entre o programa e os argumentos e o caminho quebra:
 
 ```
 "C:\Program Files\nodejs\node.exe" server.js
 ```
 
-**Importante:** coloque entre aspas qualquer parte do comando que tenha espaço no caminho (como `C:\Program Files\...`) — sem aspas, o Geploy entende o espaço como separador de argumento e quebra o caminho errado.
-
-Em qualquer um dos dois casos, lembre de preencher **"Comandos de instalação"** com `npm install` (e `npm run build`, se o projeto precisar) — eles rodam uma vez antes do primeiro start.
+Em qualquer um dos casos, lembre de preencher **"Comandos de instalação"** com `npm install` (e `npm run build`, se o projeto precisar) — eles rodam uma vez antes do primeiro start.
 
 Se der erro em qualquer passo da aprovação, nada fica pela metade: a solicitação volta para `pending` para o admin tentar de novo. Rejeitar remove a pasta clonada e não cria nada.
 

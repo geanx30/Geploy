@@ -356,7 +356,7 @@ export default function DeploySystem() {
                   <input
                     className="input mono"
                     required
-                    placeholder='"C:\Program Files\nodejs\node.exe" server.js'
+                    placeholder="npm start"
                     value={setupForm.start_command}
                     onChange={(e) => setSetupForm({ ...setupForm, start_command: e.target.value })}
                   />

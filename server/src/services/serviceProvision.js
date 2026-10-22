@@ -24,24 +24,22 @@ function runNssm(args) {
   });
 }
 
-/** Separa "C:\...\node.exe server.js --porta 3000" em executavel + argumentos. */
-function splitCommand(cmd) {
-  const parts = [];
-  const re = /"([^"]+)"|(\S+)/g;
-  let match;
-  while ((match = re.exec(cmd))) parts.push(match[1] ?? match[2]);
-  return parts;
-}
+const CMD_EXE = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe';
 
 /**
  * Cria e inicia um Windows Service via NSSM (mesmo binario ja usado pelos
  * demais sistemas deste servidor). So roda depois da aprovacao do deploy.
+ *
+ * O comando sempre roda atras de "cmd.exe /c", em vez de tentarmos separar
+ * nos mesmos o executavel dos argumentos: assim "npm start"/"npm run build"
+ * funcionam direto (npm e um .cmd, nao um .exe, entao o Windows so sabe
+ * rodar via um interpretador de shell) e o comando inteiro, com aspas e
+ * espacos, e interpretado do mesmo jeito que seria num terminal normal.
  */
 async function createWindowsService({ serviceName, command, appDirectory, stdoutLog, stderrLog }) {
-  const [exePath, ...args] = splitCommand(command);
   const steps = [];
 
-  const install = await runNssm(['install', serviceName, exePath, ...args]);
+  const install = await runNssm(['install', serviceName, CMD_EXE, '/c', command]);
   steps.push(`$ nssm install ${serviceName} ...\n${install.output}`);
   if (!install.success) {
     return { success: false, output: steps.join('\n\n') };

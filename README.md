@@ -146,7 +146,9 @@ C:\Program Files\nodejs\node.exe server.js
 
 Em qualquer um dos casos, lembre de preencher **"Comandos de instalação"** com `npm install` (e `npm run build`, se o projeto precisar) — eles rodam uma vez antes do primeiro start.
 
-Se der erro em qualquer passo da aprovação, nada fica pela metade: a solicitação volta para `pending` para o admin tentar de novo. Rejeitar remove a pasta clonada e não cria nada.
+Se der erro em qualquer passo da aprovação (incluindo falha ao criar/iniciar o serviço Windows), **nada fica pela metade**: a solicitação volta para `pending`, nenhum sistema é cadastrado, e o admin pode ajustar o que for preciso e aprovar de novo — se já existir um serviço de uma tentativa anterior com o mesmo nome, o Geploy remove e recria sozinho. Rejeitar remove a pasta clonada e não cria nada.
+
+**Removendo um sistema**: ao excluir um sistema cadastrado como Serviço Windows (tela Sistemas), o Geploy também para e remove o serviço NSSM correspondente no servidor — não fica um serviço órfão ocupando o nome para um próximo deploy. Site IIS não é removido automaticamente (precisa ser apagado manualmente no IIS Manager/appcmd).
 
 ## Editando arquivos do sistema
 

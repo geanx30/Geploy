@@ -5,6 +5,7 @@ const { encrypt } = require('../crypto');
 const { applySystemUpdate } = require('../services/applyUpdate');
 const { logAction } = require('../audit');
 const mailer = require('../services/mailer');
+const { removeWindowsService } = require('../services/serviceProvision');
 
 const router = express.Router();
 router.use(requireAuth, requirePasswordChanged, requireAdmin);
@@ -171,9 +172,34 @@ router.put('/systems/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-router.delete('/systems/:id', (req, res) => {
-  db.prepare('DELETE FROM systems WHERE id = ?').run(Number(req.params.id));
-  res.json({ ok: true });
+router.delete('/systems/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  const system = db.prepare('SELECT * FROM systems WHERE id = ?').get(id);
+  if (!system) return res.status(404).json({ error: 'Sistema nao encontrado' });
+
+  let serviceWarning = null;
+  if (system.process_type === 'windows_service' && system.service_name) {
+    const result = await removeWindowsService(system.service_name);
+    if (!result.success) {
+      serviceWarning = `Sistema removido do Geploy, mas o serviço Windows "${system.service_name}" não pôde ser removido automaticamente — remova manualmente no servidor.\n\n${result.output}`;
+    }
+  }
+
+  db.prepare('DELETE FROM systems WHERE id = ?').run(id);
+
+  logAction({
+    userId: req.user.sub,
+    systemId: null,
+    action: 'system-deleted',
+    success: !serviceWarning,
+    output: serviceWarning || `Sistema "${system.name}" removido${
+      system.process_type === 'windows_service' && system.service_name
+        ? ` (serviço Windows "${system.service_name}" removido junto).`
+        : '.'
+    }`,
+  });
+
+  res.json({ ok: true, warning: serviceWarning });
 });
 
 // ---------- Auditoria geral ----------

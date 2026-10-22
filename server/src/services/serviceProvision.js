@@ -39,8 +39,19 @@ const CMD_EXE = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe';
 async function createWindowsService({ serviceName, command, appDirectory, stdoutLog, stderrLog }) {
   const steps = [];
 
-  const install = await runNssm(['install', serviceName, CMD_EXE, '/c', command]);
+  let install = await runNssm(['install', serviceName, CMD_EXE, '/c', command]);
   steps.push(`$ nssm install ${serviceName} ...\n${install.output}`);
+
+  // Sobra de uma tentativa anterior que falhou antes de concluir (ex.: deploy
+  // reprovado no passo seguinte, ou um retry depois de corrigir o comando):
+  // remove o servico antigo e tenta de novo, em vez de deixar travado exigindo
+  // limpeza manual no servidor.
+  if (!install.success && /already exists/i.test(install.output)) {
+    await removeWindowsService(serviceName);
+    install = await runNssm(['install', serviceName, CMD_EXE, '/c', command]);
+    steps.push(`$ nssm install ${serviceName} ... (depois de remover servico anterior)\n${install.output}`);
+  }
+
   if (!install.success) {
     return { success: false, output: steps.join('\n\n') };
   }

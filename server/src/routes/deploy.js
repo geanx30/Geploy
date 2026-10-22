@@ -235,6 +235,9 @@ router.post('/:id/approve', async (req, res) => {
         stderrLog: path.join(logsDir, 'service-err.log'),
       });
       steps.push(serviceResult.output);
+      if (!serviceResult.success) {
+        throw new Error('Falha ao criar/iniciar o serviço Windows. Veja o detalhe acima, ajuste o que for preciso e aprove de novo.');
+      }
     } else {
       steps.push('Site IIS não é criado automaticamente — configure o site/app pool manualmente e depois edite o sistema cadastrado abaixo se precisar ajustar o nome.');
     }

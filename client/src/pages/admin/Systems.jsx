@@ -93,8 +93,12 @@ export default function SystemsAdmin() {
 
   async function handleDelete() {
     try {
-      await api.del(`/admin/systems/${deleteTarget.id}`);
-      push('Sistema removido.', 'success');
+      const result = await api.del(`/admin/systems/${deleteTarget.id}`);
+      if (result.warning) {
+        push(result.warning, 'error');
+      } else {
+        push('Sistema removido (serviço Windows removido junto, se houver).', 'success');
+      }
       setDeleteTarget(null);
       load();
     } catch (err) {
@@ -391,7 +395,7 @@ export default function SystemsAdmin() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title={`Remover ${deleteTarget?.name}?`}
-        message="O sistema deixará de aparecer para o dono. Esta ação não pode ser desfeita."
+        message="O sistema deixará de aparecer para o dono. Se for Serviço Windows, o serviço (NSSM) também é parado e removido do servidor. Esta ação não pode ser desfeita."
         confirmLabel="Remover"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}

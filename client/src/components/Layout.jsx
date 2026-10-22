@@ -37,6 +37,10 @@ export default function Layout({ children }) {
             <LayoutGrid size={17} />
             Meus sistemas
           </NavLink>
+          <NavLink to="/deploy" className={navItemClass}>
+            <PackagePlus size={17} />
+            Novo sistema
+          </NavLink>
 
           {user?.role === 'admin' && (
             <>
@@ -46,10 +50,6 @@ export default function Layout({ children }) {
               <NavLink to="/admin/systems" className={navItemClass}>
                 <Boxes size={17} />
                 Sistemas
-              </NavLink>
-              <NavLink to="/admin/deploy" className={navItemClass}>
-                <PackagePlus size={17} />
-                Novo sistema
               </NavLink>
               <NavLink to="/admin/approvals" className={navItemClass}>
                 <ShieldAlert size={17} />

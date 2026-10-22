@@ -21,7 +21,7 @@ export default function ApprovalsAdmin() {
 
   function load() {
     setLoading(true);
-    Promise.all([api.get('/admin/update-requests'), api.get('/admin/deploy-requests')])
+    Promise.all([api.get('/admin/update-requests'), api.get('/deploy-requests')])
       .then(([updates, deploys]) => {
         const normalized = [
           ...updates.map((r) => ({ ...r, kind: 'update', title: r.system_name })),
@@ -37,7 +37,7 @@ export default function ApprovalsAdmin() {
 
   async function decide(item, action) {
     setConfirm(null);
-    const base = item.kind === 'deploy' ? '/admin/deploy-requests' : '/admin/update-requests';
+    const base = item.kind === 'deploy' ? '/deploy-requests' : '/admin/update-requests';
     const label = action === 'approve' ? 'Aprovação' : 'Rejeição';
     setDrawer({ title: `${label} — ${item.title}`, running: true, open: true, result: null });
     try {

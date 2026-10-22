@@ -48,6 +48,7 @@ export default function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/systems/:id/files" element={<FileManager />} />
+                <Route path="/deploy" element={<DeploySystem />} />
                 <Route
                   path="/admin/users"
                   element={
@@ -61,14 +62,6 @@ export default function App() {
                   element={
                     <RequireAdmin>
                       <SystemsAdmin />
-                    </RequireAdmin>
-                  }
-                />
-                <Route
-                  path="/admin/deploy"
-                  element={
-                    <RequireAdmin>
-                      <DeploySystem />
                     </RequireAdmin>
                   }
                 />

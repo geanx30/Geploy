@@ -13,7 +13,7 @@ const { ensurePortOpenInbound } = require('../services/firewall');
 const { sendDeployRequestAlert } = require('../services/alerts');
 
 const router = express.Router();
-router.use(requireAuth, requirePasswordChanged, requireAdmin);
+router.use(requireAuth, requirePasswordChanged);
 
 const STAGING_ROOT = path.resolve(__dirname, '..', '..', '..', 'data', 'deploy-staging');
 const SISTEMAS_ROOT = process.env.SYSTEMS_ROOT || 'C:\\Sistemas';
@@ -43,10 +43,14 @@ function toPublicRequest(row) {
 }
 
 router.get('/suggested-ports', (req, res) => {
-  res.json(suggestPorts(usedPortsFromSystems()));
+  const ports = suggestPorts(usedPortsFromSystems());
+  // "used" lista todas as portas ocupadas no servidor (de qualquer sistema,
+  // nao so dos proprios) - informacao fica restrita ao admin, usuario comum
+  // so ve as sugestoes livres.
+  res.json(req.user.role === 'admin' ? ports : { suggestions: ports.suggestions });
 });
 
-router.get('/', (req, res) => {
+router.get('/', requireAdmin, (req, res) => {
   const rows = db
     .prepare(
       `SELECT dr.*, ru.username AS requested_by, du.username AS decided_by, ou.username AS owner_username
@@ -96,7 +100,7 @@ router.post('/preview', async (req, res) => {
     findings,
     envTemplates,
     suggestedPorts: ports.suggestions,
-    usedPorts: ports.used,
+    usedPorts: req.user.role === 'admin' ? ports.used : undefined,
   });
 });
 
@@ -124,7 +128,12 @@ router.post('/', (req, res) => {
     env_files,
   } = req.body || {};
 
-  if (!name || !owner_user_id || !staging_path || !repo_url || !process_type) {
+  // O dono so pode ser escolhido pelo admin. Quando quem pede nao e admin,
+  // o dono e sempre o proprio solicitante - nunca um valor vindo do corpo da
+  // requisicao, mesmo que o cliente tente enviar outro owner_user_id.
+  const resolvedOwnerId = req.user.role === 'admin' ? Number(owner_user_id) : req.user.sub;
+
+  if (!name || !resolvedOwnerId || !staging_path || !repo_url || !process_type) {
     return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
   }
   if (!path.resolve(staging_path).startsWith(path.resolve(STAGING_ROOT) + path.sep)) {
@@ -135,6 +144,9 @@ router.post('/', (req, res) => {
   }
   if (process_type === 'windows_service' && !start_command) {
     return res.status(400).json({ error: 'Informe o comando que inicia o sistema.' });
+  }
+  if (!db.prepare('SELECT id FROM users WHERE id = ?').get(resolvedOwnerId)) {
+    return res.status(400).json({ error: 'Dono do sistema inválido.' });
   }
 
   const findings = scanTree(staging_path);
@@ -155,7 +167,7 @@ router.post('/', (req, res) => {
     .run({
       requested_by_user_id: req.user.sub,
       name,
-      owner_user_id: Number(owner_user_id),
+      owner_user_id: resolvedOwnerId,
       staging_path,
       final_path: path.join(SISTEMAS_ROOT, safeFolderName(name)),
       repo_url,
@@ -195,7 +207,7 @@ router.post('/', (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid });
 });
 
-router.post('/:id/approve', async (req, res) => {
+router.post('/:id/approve', requireAdmin, async (req, res) => {
   const reqRow = db.prepare('SELECT * FROM deploy_requests WHERE id = ?').get(Number(req.params.id));
   if (!reqRow) return res.status(404).json({ error: 'Solicitação não encontrada.' });
   if (reqRow.status !== 'pending') return res.status(400).json({ error: 'Solicitação já foi decidida.' });
@@ -307,7 +319,7 @@ router.post('/:id/approve', async (req, res) => {
   }
 });
 
-router.post('/:id/reject', (req, res) => {
+router.post('/:id/reject', requireAdmin, (req, res) => {
   const reqRow = db.prepare('SELECT * FROM deploy_requests WHERE id = ?').get(Number(req.params.id));
   if (!reqRow) return res.status(404).json({ error: 'Solicitação não encontrada.' });
   if (reqRow.status !== 'pending') return res.status(400).json({ error: 'Solicitação já foi decidida.' });

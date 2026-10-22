@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../api/client';
 import { useToast } from '../../components/Toast.jsx';
+import { useAuth } from '../../auth/AuthContext.jsx';
 
 const emptyCloneForm = {
   name: '',
@@ -26,6 +27,8 @@ const emptyCloneForm = {
 export default function DeploySystem() {
   const { push } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const [cloneForm, setCloneForm] = useState(emptyCloneForm);
   const [cloning, setCloning] = useState(false);
@@ -35,7 +38,7 @@ export default function DeploySystem() {
   const [users, setUsers] = useState([]);
   const [envValues, setEnvValues] = useState({}); // { targetPath: { KEY: value } }
   const [setupForm, setSetupForm] = useState({
-    owner_user_id: '',
+    owner_user_id: isAdmin ? '' : String(user?.id || ''),
     process_type: 'windows_service',
     service_name: '',
     site_name: '',
@@ -49,8 +52,10 @@ export default function DeploySystem() {
   const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
-    api.get('/admin/users').then(setUsers).catch(() => {});
-  }, []);
+    // /admin/users so admin pode chamar - usuario comum ja e o proprio dono,
+    // fixo, entao nem precisa da lista.
+    if (isAdmin) api.get('/admin/users').then(setUsers).catch(() => {});
+  }, [isAdmin]);
 
   async function handleClone(e) {
     e.preventDefault();
@@ -58,7 +63,7 @@ export default function DeploySystem() {
     setCloning(true);
     setPreview(null);
     try {
-      const result = await api.post('/admin/deploy-requests/preview', cloneForm);
+      const result = await api.post('/deploy-requests/preview', cloneForm);
       if (!result.success) {
         setCloneError(result.output);
         return;
@@ -100,7 +105,7 @@ export default function DeploySystem() {
         values: envValues[tpl.targetPath] || {},
       }));
 
-      await api.post('/admin/deploy-requests', {
+      await api.post('/deploy-requests', {
         name: cloneForm.name,
         repo_url: cloneForm.repo_url,
         git_auth_type: cloneForm.git_auth_type,
@@ -121,7 +126,7 @@ export default function DeploySystem() {
       });
 
       push('Pedido de deploy enviado para aprovação de um admin.', 'success');
-      navigate('/admin/approvals');
+      navigate(isAdmin ? '/admin/approvals' : '/');
     } catch (err) {
       setSubmitError(err.message);
     } finally {
@@ -137,8 +142,15 @@ export default function DeploySystem() {
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Novo sistema (deploy)</h1>
         <p className="mt-1 text-sm text-slate-500">
           Clona um repositório, analisa o código e ajuda a configurar antes de criar o sistema de verdade. Toda
-          solicitação — mesmo feita por um admin — fica pendente até outro admin aprovar em{' '}
-          <span className="font-medium">Aprovações</span>.
+          solicitação — mesmo feita por um admin — fica pendente até um admin aprovar
+          {isAdmin ? (
+            <>
+              {' '}
+              em <span className="font-medium">Aprovações</span>.
+            </>
+          ) : (
+            '. Você será o dono do sistema criado.'
+          )}
         </p>
       </div>
 
@@ -313,19 +325,25 @@ export default function DeploySystem() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Dono do sistema</label>
-                <select
-                  className="input"
-                  required
-                  value={setupForm.owner_user_id}
-                  onChange={(e) => setSetupForm({ ...setupForm, owner_user_id: e.target.value })}
-                >
-                  <option value="">Selecione...</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.username}
-                    </option>
-                  ))}
-                </select>
+                {isAdmin ? (
+                  <select
+                    className="input"
+                    required
+                    value={setupForm.owner_user_id}
+                    onChange={(e) => setSetupForm({ ...setupForm, owner_user_id: e.target.value })}
+                  >
+                    <option value="">Selecione...</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.username}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="input flex items-center text-slate-500 dark:text-slate-400">
+                    {user?.username} (você)
+                  </div>
+                )}
               </div>
               <div>
                 <label className="label">Tipo de processo</label>

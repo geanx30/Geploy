@@ -19,7 +19,12 @@ app.use(cors({ origin: true, credentials: true }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/systems', require('./routes/systems'));
 app.use('/api/admin', require('./routes/admin'));
-app.use('/api/admin/deploy-requests', require('./routes/deploy'));
+// Fora do prefixo /api/admin de proposito: usuarios comuns tambem podem
+// solicitar deploy (o dono fica travado neles mesmos). Se ficasse aninhado
+// em /api/admin, o "router.use(requireAdmin)" do routes/admin.js bloquearia
+// a requisicao antes mesmo dela chegar nas rotas deste router (Express casa
+// por prefixo de path, nao por router exato).
+app.use('/api/deploy-requests', require('./routes/deploy'));
 
 const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
 app.use(express.static(clientDist));

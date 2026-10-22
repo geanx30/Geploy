@@ -9,6 +9,7 @@ const { scanTree } = require('../services/riskScan');
 const { cloneRepo, removeDir, findEnvTemplates, writeEnvFiles, suggestPorts } = require('../services/deployWizard');
 const { createWindowsService } = require('../services/serviceProvision');
 const { runPostUpdateCommands } = require('../services/postUpdate');
+const { ensurePortOpenInbound } = require('../services/firewall');
 const { sendDeployRequestAlert } = require('../services/alerts');
 
 const router = express.Router();
@@ -223,11 +224,12 @@ router.post('/:id/approve', async (req, res) => {
       }
     }
 
+    const portMatch = (reqRow.access_url || '').match(/:(\d+)\b/);
+
     let serviceResult = { success: true, output: '' };
     if (reqRow.process_type === 'windows_service') {
       const logsDir = path.join(reqRow.final_path, 'logs');
       fs.mkdirSync(logsDir, { recursive: true });
-      const portMatch = (reqRow.access_url || '').match(/:(\d+)\b/);
       serviceResult = await createWindowsService({
         serviceName: reqRow.service_name,
         command: reqRow.start_command,
@@ -245,6 +247,14 @@ router.post('/:id/approve', async (req, res) => {
       }
     } else {
       steps.push('Site IIS não é criado automaticamente — configure o site/app pool manualmente e depois edite o sistema cadastrado abaixo se precisar ajustar o nome.');
+    }
+
+    if (portMatch) {
+      // Nao bloqueia a aprovacao se falhar (o sistema ja esta rodando no
+      // servidor nesse ponto) - so avisa, pra nao deixar o admin sem saber
+      // que precisa liberar a porta manualmente.
+      const fw = await ensurePortOpenInbound(Number(portMatch[1]), reqRow.name);
+      steps.push(fw.output);
     }
 
     const systemInfo = db

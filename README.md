@@ -122,6 +122,7 @@ Tela **Novo sistema** (`/admin/deploy`): em vez de preencher o cadastro manualme
 - Grava os `.env` com os valores preenchidos no formulário;
 - Roda os **comandos de instalação** (o mesmo campo usado depois em cada atualização, ex.: `npm install`) uma vez, na pasta recém-criada, **antes** de criar o serviço — se falhar, nada é criado e o pedido continua pendente para o admin corrigir e tentar de novo;
 - Cria e inicia o Windows Service via NSSM (ou deixa anotado para configuração manual, se for site IIS);
+- **Libera a porta do Endereço interno no Firewall do Windows**, se ainda não estiver liberada: antes de criar qualquer regra, consulta as regras já existentes (via PowerShell `Get-NetFirewallRule`) — se alguma já libera entrada TCP naquela porta (do próprio Geploy ou de qualquer outro sistema/administrador), não duplica nada; senão, cria uma regra nova (`netsh advfirewall`) só para aquela porta, nomeada `Geploy - <nome do sistema> (<porta>/TCP)` para ficar fácil de achar depois. Essa checagem/criação não trava a aprovação se falhar — o sistema já está rodando no servidor nesse ponto, só fica um aviso no resultado para o admin liberar manualmente se precisar.
 - Cadastra o sistema normalmente (dono, portas, endereços).
 
 ### Comando que inicia o sistema (campo "Comando que inicia o sistema")

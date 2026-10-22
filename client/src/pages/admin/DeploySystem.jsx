@@ -408,6 +408,10 @@ export default function DeploySystem() {
                   value={setupForm.access_url}
                   onChange={(e) => setSetupForm({ ...setupForm, access_url: e.target.value })}
                 />
+                <p className="mt-1 text-xs text-slate-500">
+                  A porta daqui (ex.: <span className="mono">:3004</span>) é passada automaticamente para o
+                  serviço como variável de ambiente <span className="mono">PORT</span>.
+                </p>
               </div>
               <div>
                 <label className="label">DNS público (opcional)</label>

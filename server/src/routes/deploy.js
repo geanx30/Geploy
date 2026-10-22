@@ -227,13 +227,18 @@ router.post('/:id/approve', async (req, res) => {
     if (reqRow.process_type === 'windows_service') {
       const logsDir = path.join(reqRow.final_path, 'logs');
       fs.mkdirSync(logsDir, { recursive: true });
+      const portMatch = (reqRow.access_url || '').match(/:(\d+)\b/);
       serviceResult = await createWindowsService({
         serviceName: reqRow.service_name,
         command: reqRow.start_command,
         appDirectory: reqRow.final_path,
         stdoutLog: path.join(logsDir, 'service-out.log'),
         stderrLog: path.join(logsDir, 'service-err.log'),
+        env: portMatch ? { PORT: portMatch[1] } : undefined,
       });
+      if (portMatch) {
+        steps.push(`Variável de ambiente PORT=${portMatch[1]} definida para o serviço (a partir do endereço interno).`);
+      }
       steps.push(serviceResult.output);
       if (!serviceResult.success) {
         throw new Error('Falha ao criar/iniciar o serviço Windows. Veja o detalhe acima, ajuste o que for preciso e aprove de novo.');

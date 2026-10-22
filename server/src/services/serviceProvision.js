@@ -36,7 +36,7 @@ const CMD_EXE = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe';
  * rodar via um interpretador de shell) e o comando inteiro, com aspas e
  * espacos, e interpretado do mesmo jeito que seria num terminal normal.
  */
-async function createWindowsService({ serviceName, command, appDirectory, stdoutLog, stderrLog }) {
+async function createWindowsService({ serviceName, command, appDirectory, stdoutLog, stderrLog, env }) {
   const steps = [];
 
   let install = await runNssm(['install', serviceName, CMD_EXE, '/c', command]);
@@ -61,6 +61,16 @@ async function createWindowsService({ serviceName, command, appDirectory, stdout
   if (stderrLog) await runNssm(['set', serviceName, 'AppStderr', stderrLog]);
   await runNssm(['set', serviceName, 'AppRotateFiles', '1']);
   await runNssm(['set', serviceName, 'Start', 'SERVICE_AUTO_START']);
+  if (env && Object.keys(env).length > 0) {
+    // AppEnvironmentExtra soma variaveis de ambiente so para o processo deste
+    // servico (nao mexe no ambiente do Windows). E assim que o Geploy garante
+    // que o sistema sobe na porta escolhida no assistente, mesmo quando o
+    // projeto nao tem .env proprio (convencao: variavel PORT).
+    const envString = Object.entries(env)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+    await runNssm(['set', serviceName, 'AppEnvironmentExtra', envString]);
+  }
 
   const start = await runNssm(['start', serviceName]);
   steps.push(`$ nssm start ${serviceName}\n${start.output}`);

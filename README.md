@@ -113,7 +113,7 @@ Tela **Novo sistema** (`/admin/deploy`): em vez de preencher o cadastro manualme
 1. **Clona** o repositório numa pasta de rascunho (`data/deploy-staging/`, fora de `C:\Sistemas` até a aprovação).
 2. **Roda o mesmo scanner de padrões de risco** usado nas atualizações (`services/riskScan.js`) em toda a árvore de arquivos clonada (ignora `.git`, `node_modules`, `dist`, `build` etc.) e mostra os achados.
 3. **Procura arquivos `.env.example` / `.env.sample` / `.env.template`** (raiz e subpastas) e monta um formulário com cada variável encontrada, pré-preenchido com o valor padrão do template — o admin ajusta os valores reais (senha de banco, chaves etc.) antes de criar o sistema.
-4. **Sugere portas livres** (`netstat` + portas já usadas por sistemas cadastrados) para o admin escolher.
+4. **Sugere portas livres** (`netstat` + portas já usadas por sistemas cadastrados) para o admin escolher. A porta escolhida no **Endereço interno** (ex.: `vm-sistemas:3004`) é passada para o processo como variável de ambiente `PORT` (via NSSM, sem precisar de `.env`) — é essa a convenção que a maioria dos projetos Node usa (`process.env.PORT`). Se o projeto usar outro nome de variável para a porta, ajuste isso manualmente no `.env` gerado ou no código antes de aprovar.
 5. O admin completa dono, tipo de processo (Serviço Windows/NSSM ou Site IIS), nome do serviço, comando que inicia o sistema, comandos de instalação/pós-atualização e endereços — igual ao cadastro manual.
 
 **Nada é criado na hora.** Ao enviar, vira uma **solicitação de deploy pendente** (mesma tela **Aprovações**, junto com as atualizações suspeitas) — **mesmo que quem pediu seja um admin**, outro admin precisa aprovar. Só na aprovação o Geploy:

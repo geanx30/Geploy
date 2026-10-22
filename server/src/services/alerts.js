@@ -75,4 +75,38 @@ async function sendDownAlert(system) {
   });
 }
 
-module.exports = { sendRiskAlert, sendDownAlert, adminEmails, ownerEmail };
+/**
+ * Dispara sempre que um novo pedido de deploy (sistema novo) e criado —
+ * mesmo quando quem pediu e um admin, toda solicitacao fica pendente de
+ * aprovacao de algum admin. Vai para todos os admins.
+ */
+async function sendDeployRequestAlert({ name, requestedByUsername, findings, requestId }) {
+  const to = adminEmails();
+  if (to.length === 0) return;
+
+  const hasRisk = findings.length > 0;
+  const findingsList = findings.map((f) => `- ${f.label}${f.file ? ` (${f.file}:${f.line})` : ''}`).join('\n');
+
+  const html = renderAlertEmail({
+    tone: hasRisk ? 'warning' : 'info',
+    badge: 'Novo sistema aguardando aprovação',
+    title: `"${name}" foi solicitado como sistema novo`,
+    intro: hasRisk
+      ? `${requestedByUsername} pediu o deploy do sistema "${name}" e a análise encontrou ${findings.length} ponto(s) suspeito(s) no repositório clonado:`
+      : `${requestedByUsername} pediu o deploy do sistema "${name}". Nenhum ponto suspeito encontrado no repositório clonado, mas toda solicitação de sistema novo precisa de aprovação.`,
+    items: findings.map((f) => ({ label: f.label, meta: f.file ? `${f.file}:${f.line}` : null })),
+    ctaLabel: `Revisar solicitação #${requestId}`,
+    ctaUrl: `${BASE_URL}/admin/approvals`,
+  });
+
+  await sendMail({
+    to,
+    subject: `Geploy: novo sistema "${name}" aguardando aprovação`,
+    text: `${requestedByUsername} pediu o deploy do sistema "${name}".\n\n${
+      hasRisk ? `${findings.length} ponto(s) suspeito(s):\n${findingsList}\n\n` : ''
+    }Revise e aprove ou rejeite em: ${BASE_URL}/admin/approvals (solicitação #${requestId})`,
+    html,
+  });
+}
+
+module.exports = { sendRiskAlert, sendDownAlert, sendDeployRequestAlert, adminEmails, ownerEmail };

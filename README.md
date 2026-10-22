@@ -106,6 +106,25 @@ Tela **Sistemas → Novo sistema**:
   - **Não inclua `cd C:\Sistemas\NomeDoSistema` nem `git pull`** — já começa na pasta do sistema e o pull já roda antes. Um `cd subpasta` funciona normalmente e vale para as linhas seguintes (ex.: `cd client` seguido de `npm install`/`npm run build` roda os dois dentro de `client/`), mas não sai da pasta do sistema (bloqueado por segurança).
 - **Endereço interno / DNS público (opcional)**: onde o sistema roda (ex.: `vm-sistemas:3000`) e/ou o domínio público (ex.: `gcontrol.grupogadens.com.br`). Aparecem como links clicáveis no card, para quem for acessar o sistema não precisar perguntar.
 
+## Cadastrando um sistema novo pelo assistente de deploy (admin)
+
+Tela **Novo sistema** (`/admin/deploy`): em vez de preencher o cadastro manualmente, o admin informa só a **URL do repositório** (e credencial git, se for privado) e o Geploy:
+
+1. **Clona** o repositório numa pasta de rascunho (`data/deploy-staging/`, fora de `C:\Sistemas` até a aprovação).
+2. **Roda o mesmo scanner de padrões de risco** usado nas atualizações (`services/riskScan.js`) em toda a árvore de arquivos clonada (ignora `.git`, `node_modules`, `dist`, `build` etc.) e mostra os achados.
+3. **Procura arquivos `.env.example` / `.env.sample` / `.env.template`** (raiz e subpastas) e monta um formulário com cada variável encontrada, pré-preenchido com o valor padrão do template — o admin ajusta os valores reais (senha de banco, chaves etc.) antes de criar o sistema.
+4. **Sugere portas livres** (`netstat` + portas já usadas por sistemas cadastrados) para o admin escolher.
+5. O admin completa dono, tipo de processo (Serviço Windows/NSSM ou Site IIS), nome do serviço, comando que inicia o sistema, comandos pós-atualização e endereços — igual ao cadastro manual.
+
+**Nada é criado na hora.** Ao enviar, vira uma **solicitação de deploy pendente** (mesma tela **Aprovações**, junto com as atualizações suspeitas) — **mesmo que quem pediu seja um admin**, outro admin precisa aprovar. Só na aprovação o Geploy:
+
+- Move a pasta clonada para o destino definitivo (`C:\Sistemas\<nome>`);
+- Grava os `.env` com os valores preenchidos no formulário;
+- Cria e inicia o Windows Service via NSSM (ou deixa anotado para configuração manual, se for site IIS);
+- Cadastra o sistema normalmente (dono, portas, endereços).
+
+Se der erro em qualquer passo da aprovação, nada fica pela metade: a solicitação volta para `pending` para o admin tentar de novo. Rejeitar remove a pasta clonada e não cria nada.
+
 ## Editando arquivos do sistema
 
 O link **Arquivos** no card abre um navegador da pasta do sistema com editor de texto (para ajustar `.env`, configs etc.). Dono e admins podem usar, cada um só nos sistemas que acessa.

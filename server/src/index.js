@@ -19,6 +19,7 @@ app.use(cors({ origin: true, credentials: true }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/systems', require('./routes/systems'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/admin/deploy-requests', require('./routes/deploy'));
 
 const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
 app.use(express.static(clientDist));

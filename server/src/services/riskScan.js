@@ -44,6 +44,16 @@ const RISK_PATTERNS = [
   },
 ];
 
+function checkLine(content) {
+  const hits = [];
+  for (const pattern of RISK_PATTERNS) {
+    if (pattern.re.test(content) && (!pattern.contextRe || pattern.contextRe.test(content))) {
+      hits.push({ patternId: pattern.id, label: pattern.label, snippet: content.trim().slice(0, 200) });
+    }
+  }
+  return hits;
+}
+
 /**
  * Varre o texto de um `git diff` (formato unificado) procurando padroes de
  * risco apenas nas linhas adicionadas, com arquivo/linha para referencia.
@@ -70,16 +80,8 @@ function scanDiff(diffText) {
 
     if (rawLine.startsWith('+')) {
       const content = rawLine.slice(1);
-      for (const pattern of RISK_PATTERNS) {
-        if (pattern.re.test(content) && (!pattern.contextRe || pattern.contextRe.test(content))) {
-          findings.push({
-            file: currentFile,
-            line: newLineNo,
-            patternId: pattern.id,
-            label: pattern.label,
-            snippet: content.trim().slice(0, 200),
-          });
-        }
+      for (const hit of checkLine(content)) {
+        findings.push({ file: currentFile, line: newLineNo, ...hit });
       }
       if (newLineNo != null) newLineNo++;
     } else if (rawLine.startsWith(' ')) {
@@ -91,4 +93,79 @@ function scanDiff(diffText) {
   return findings;
 }
 
-module.exports = { scanDiff };
+const fs = require('node:fs');
+const path = require('node:path');
+
+const SCAN_SKIP_DIRS = new Set(['.git', 'node_modules', 'dist', 'build', '.next', 'venv', '__pycache__']);
+const MAX_FILE_BYTES_TO_SCAN = 512 * 1024;
+const MAX_FILES_TO_SCAN = 2000;
+const MAX_FINDINGS = 200;
+
+function isBinaryBuffer(buf) {
+  return buf.subarray(0, 8000).includes(0);
+}
+
+/**
+ * Varre TODOS os arquivos de texto de uma pasta (usado no deploy de um
+ * sistema novo, onde nao existe "diff" — o repositorio inteiro acabou de
+ * ser clonado). Mesmos padroes do scanDiff, porem linha por linha no
+ * conteudo atual dos arquivos, nao em cima de um git diff.
+ */
+function scanTree(rootPath) {
+  const findings = [];
+  let filesScanned = 0;
+
+  function walk(dir) {
+    if (findings.length >= MAX_FINDINGS || filesScanned >= MAX_FILES_TO_SCAN) return;
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (findings.length >= MAX_FINDINGS || filesScanned >= MAX_FILES_TO_SCAN) return;
+      if (SCAN_SKIP_DIRS.has(entry.name)) continue;
+
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+
+      filesScanned++;
+      let stat;
+      try {
+        stat = fs.statSync(full);
+      } catch {
+        continue;
+      }
+      if (stat.size === 0 || stat.size > MAX_FILE_BYTES_TO_SCAN) continue;
+
+      let buf;
+      try {
+        buf = fs.readFileSync(full);
+      } catch {
+        continue;
+      }
+      if (isBinaryBuffer(buf)) continue;
+
+      const relFile = path.relative(rootPath, full).split(path.sep).join('/');
+      const lines = buf.toString('utf8').split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        for (const hit of checkLine(lines[i])) {
+          findings.push({ file: relFile, line: i + 1, ...hit });
+          if (findings.length >= MAX_FINDINGS) break;
+        }
+        if (findings.length >= MAX_FINDINGS) break;
+      }
+    }
+  }
+
+  walk(rootPath);
+  return findings;
+}
+
+module.exports = { scanDiff, scanTree };

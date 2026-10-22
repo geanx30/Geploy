@@ -72,9 +72,40 @@ CREATE TABLE IF NOT EXISTS smtp_settings (
   updated_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS deploy_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  requested_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
+  name TEXT NOT NULL,
+  owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  staging_path TEXT NOT NULL,
+  final_path TEXT NOT NULL,
+  repo_url TEXT NOT NULL,
+  git_auth_type TEXT NOT NULL CHECK (git_auth_type IN ('none', 'https_token', 'ssh_key')) DEFAULT 'none',
+  git_username TEXT,
+  git_token_encrypted TEXT,
+  git_ssh_key_path TEXT,
+  process_type TEXT NOT NULL CHECK (process_type IN ('windows_service', 'iis_site')),
+  service_name TEXT,
+  site_name TEXT,
+  app_pool_name TEXT,
+  start_command TEXT,
+  post_update_commands TEXT,
+  access_url TEXT,
+  public_url TEXT,
+  env_files_encrypted TEXT,
+  findings_json TEXT,
+  decided_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_at TEXT,
+  result_output TEXT,
+  system_id INTEGER REFERENCES systems(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_systems_owner ON systems(owner_user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_system ON audit_logs(system_id);
 CREATE INDEX IF NOT EXISTS idx_update_requests_status ON update_requests(status);
+CREATE INDEX IF NOT EXISTS idx_deploy_requests_status ON deploy_requests(status);
 `);
 
 // Migracao leve para bancos criados antes destes campos existirem.

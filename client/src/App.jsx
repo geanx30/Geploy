@@ -11,6 +11,7 @@ import SystemsAdmin from './pages/admin/Systems.jsx';
 import AuditAdmin from './pages/admin/Audit.jsx';
 import ApprovalsAdmin from './pages/admin/Approvals.jsx';
 import SmtpAdmin from './pages/admin/Smtp.jsx';
+import DeploySystem from './pages/admin/DeploySystem.jsx';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -60,6 +61,14 @@ export default function App() {
                   element={
                     <RequireAdmin>
                       <SystemsAdmin />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="/admin/deploy"
+                  element={
+                    <RequireAdmin>
+                      <DeploySystem />
                     </RequireAdmin>
                   }
                 />

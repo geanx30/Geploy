@@ -4,6 +4,7 @@
 const COLORS = {
   danger: { bg: '#fef2f2', border: '#fecaca', text: '#991b1b', accent: '#dc2626' },
   warning: { bg: '#fffbeb', border: '#fde68a', text: '#92400e', accent: '#d97706' },
+  info: { bg: '#eef4ff', border: '#bfdbfe', text: '#1e40af', accent: '#3863f5' },
 };
 
 function escapeHtml(str = '') {

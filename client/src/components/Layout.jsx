@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutGrid, Users, Boxes, ScrollText, LogOut, Rocket, ShieldAlert, Settings, Mail } from 'lucide-react';
+import { LayoutGrid, Users, Boxes, ScrollText, LogOut, Rocket, ShieldAlert, Settings, Mail, PackagePlus } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
 
@@ -46,6 +46,10 @@ export default function Layout({ children }) {
               <NavLink to="/admin/systems" className={navItemClass}>
                 <Boxes size={17} />
                 Sistemas
+              </NavLink>
+              <NavLink to="/admin/deploy" className={navItemClass}>
+                <PackagePlus size={17} />
+                Novo sistema
               </NavLink>
               <NavLink to="/admin/approvals" className={navItemClass}>
                 <ShieldAlert size={17} />

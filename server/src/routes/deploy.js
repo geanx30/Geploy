@@ -8,6 +8,7 @@ const { logAction } = require('../audit');
 const { scanTree } = require('../services/riskScan');
 const { cloneRepo, removeDir, findEnvTemplates, writeEnvFiles, suggestPorts } = require('../services/deployWizard');
 const { createWindowsService } = require('../services/serviceProvision');
+const { runPostUpdateCommands } = require('../services/postUpdate');
 const { sendDeployRequestAlert } = require('../services/alerts');
 
 const router = express.Router();
@@ -209,6 +210,17 @@ router.post('/:id/approve', async (req, res) => {
     if (reqRow.env_files_encrypted) {
       writeEnvFiles(reqRow.final_path, JSON.parse(decrypt(reqRow.env_files_encrypted)));
       steps.push('Arquivos .env gravados.');
+    }
+
+    if (reqRow.post_update_commands) {
+      const setupResult = await runPostUpdateCommands({
+        repo_path: reqRow.final_path,
+        post_update_commands: reqRow.post_update_commands,
+      });
+      steps.push(`Comandos de instalação:\n${setupResult.output}`);
+      if (!setupResult.success) {
+        throw new Error('Falha ao rodar os comandos de instalação. Veja o detalhe acima.');
+      }
     }
 
     let serviceResult = { success: true, output: '' };

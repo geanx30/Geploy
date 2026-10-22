@@ -114,14 +114,33 @@ Tela **Novo sistema** (`/admin/deploy`): em vez de preencher o cadastro manualme
 2. **Roda o mesmo scanner de padrões de risco** usado nas atualizações (`services/riskScan.js`) em toda a árvore de arquivos clonada (ignora `.git`, `node_modules`, `dist`, `build` etc.) e mostra os achados.
 3. **Procura arquivos `.env.example` / `.env.sample` / `.env.template`** (raiz e subpastas) e monta um formulário com cada variável encontrada, pré-preenchido com o valor padrão do template — o admin ajusta os valores reais (senha de banco, chaves etc.) antes de criar o sistema.
 4. **Sugere portas livres** (`netstat` + portas já usadas por sistemas cadastrados) para o admin escolher.
-5. O admin completa dono, tipo de processo (Serviço Windows/NSSM ou Site IIS), nome do serviço, comando que inicia o sistema, comandos pós-atualização e endereços — igual ao cadastro manual.
+5. O admin completa dono, tipo de processo (Serviço Windows/NSSM ou Site IIS), nome do serviço, comando que inicia o sistema, comandos de instalação/pós-atualização e endereços — igual ao cadastro manual.
 
 **Nada é criado na hora.** Ao enviar, vira uma **solicitação de deploy pendente** (mesma tela **Aprovações**, junto com as atualizações suspeitas) — **mesmo que quem pediu seja um admin**, outro admin precisa aprovar. Só na aprovação o Geploy:
 
 - Move a pasta clonada para o destino definitivo (`C:\Sistemas\<nome>`);
 - Grava os `.env` com os valores preenchidos no formulário;
+- Roda os **comandos de instalação** (o mesmo campo usado depois em cada atualização, ex.: `npm install`) uma vez, na pasta recém-criada, **antes** de criar o serviço — se falhar, nada é criado e o pedido continua pendente para o admin corrigir e tentar de novo;
 - Cria e inicia o Windows Service via NSSM (ou deixa anotado para configuração manual, se for site IIS);
 - Cadastra o sistema normalmente (dono, portas, endereços).
+
+### Comando que inicia o sistema (campo "Comando que inicia o sistema")
+
+É o comando literal que vira o serviço Windows via NSSM — não é um shell, então **"npm start" sozinho não funciona** (o Windows não executa `.cmd`/`.bat` diretamente como um serviço). Para projetos Node que usam `npm start`, use o `cmd.exe` como "ponte":
+
+```
+C:\Windows\System32\cmd.exe /c "npm start"
+```
+
+(NSSM define a pasta de trabalho automaticamente como a pasta do sistema, então `npm start` já roda no lugar certo.) Se o projeto expõe um entrypoint direto, prefira chamar o Node diretamente — mais simples e sem a camada extra do `cmd.exe`:
+
+```
+"C:\Program Files\nodejs\node.exe" server.js
+```
+
+**Importante:** coloque entre aspas qualquer parte do comando que tenha espaço no caminho (como `C:\Program Files\...`) — sem aspas, o Geploy entende o espaço como separador de argumento e quebra o caminho errado.
+
+Em qualquer um dos dois casos, lembre de preencher **"Comandos de instalação"** com `npm install` (e `npm run build`, se o projeto precisar) — eles rodam uma vez antes do primeiro start.
 
 Se der erro em qualquer passo da aprovação, nada fica pela metade: a solicitação volta para `pending` para o admin tentar de novo. Rejeitar remove a pasta clonada e não cria nada.
 

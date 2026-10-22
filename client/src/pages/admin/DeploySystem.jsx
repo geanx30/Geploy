@@ -356,7 +356,7 @@ export default function DeploySystem() {
                   <input
                     className="input mono"
                     required
-                    placeholder='C:\Program Files\nodejs\node.exe server.js'
+                    placeholder='"C:\Program Files\nodejs\node.exe" server.js'
                     value={setupForm.start_command}
                     onChange={(e) => setSetupForm({ ...setupForm, start_command: e.target.value })}
                   />
@@ -387,13 +387,17 @@ export default function DeploySystem() {
             )}
 
             <div className="mt-3">
-              <label className="label">Comandos pós-atualização (opcional, para futuras atualizações)</label>
+              <label className="label">Comandos de instalação / pós-atualização (opcional)</label>
               <textarea
                 className="input mono min-h-[80px]"
                 placeholder={'npm install\nnpm run build'}
                 value={setupForm.post_update_commands}
                 onChange={(e) => setSetupForm({ ...setupForm, post_update_commands: e.target.value })}
               />
+              <p className="mt-1 text-xs text-slate-500">
+                Rodam uma vez agora, na aprovação, antes do serviço iniciar pela primeira vez (ex.:{' '}
+                <span className="mono">npm install</span>) — e também em toda atualização futura.
+              </p>
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-3">

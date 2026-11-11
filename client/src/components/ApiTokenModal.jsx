@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { KeyRound, Loader2, AlertCircle, Copy, Check, Trash2 } from 'lucide-react';
 import Modal from './Modal.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
@@ -26,6 +26,7 @@ export default function ApiTokenModal({ open, systemId, systemName, hasToken, on
   const [confirmGenerate, setConfirmGenerate] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [copied, setCopied] = useState(false);
+  const tokenInputRef = useRef(null);
 
   async function generate() {
     setConfirmGenerate(false);
@@ -58,11 +59,41 @@ export default function ApiTokenModal({ open, systemId, systemName, hasToken, on
     }
   }
 
-  function copyToken() {
-    navigator.clipboard?.writeText(token).then(() => {
+  function copyWithExecCommand() {
+    const input = tokenInputRef.current;
+    if (!input) return false;
+    input.focus();
+    input.select();
+    input.setSelectionRange(0, input.value.length);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    }
+  }
+
+  async function copyToken() {
+    // navigator.clipboard só existe em contexto seguro (HTTPS ou localhost) -
+    // o Geploy roda em HTTP puro na rede interna, então cai sempre no
+    // fallback abaixo (seleciona o campo + document.execCommand('copy'),
+    // que funciona em HTTP normal).
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(token);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        return;
+      }
+    } catch {
+      // segue para o fallback
+    }
+
+    if (copyWithExecCommand()) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
+    } else {
+      setError('Não consegui copiar automaticamente — selecione o campo do token e copie manualmente (Ctrl+C).');
+    }
   }
 
   function handleClose() {
@@ -86,7 +117,13 @@ export default function ApiTokenModal({ open, systemId, systemName, hasToken, on
             Guarde este token agora — ele não aparece de novo depois de fechar esta tela.
           </p>
           <div className="flex items-center gap-2">
-            <input className="input mono flex-1 !text-xs" readOnly value={token} onFocus={(e) => e.target.select()} />
+            <input
+              ref={tokenInputRef}
+              className="input mono flex-1 !text-xs"
+              readOnly
+              value={token}
+              onFocus={(e) => e.target.select()}
+            />
             <button type="button" className="btn-secondary shrink-0 !px-2.5" onClick={copyToken} title="Copiar">
               {copied ? <Check size={14} /> : <Copy size={14} />}
             </button>

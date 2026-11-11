@@ -153,6 +153,23 @@ Se der erro em qualquer passo da aprovação (incluindo falha ao criar/iniciar o
 
 **Removendo um sistema**: ao excluir um sistema cadastrado como Serviço Windows (tela Sistemas), o Geploy também para e remove o serviço NSSM correspondente no servidor — não fica um serviço órfão ocupando o nome para um próximo deploy. Site IIS não é removido automaticamente (precisa ser apagado manualmente no IIS Manager/appcmd).
 
+## Atualizando/reiniciando um sistema via API (automação)
+
+Cada sistema pode ter um **token de API** próprio — no card do sistema (tela principal), botão "Gerar token de API (automação)". Serve para um script ou agente do próprio dono (ex.: outro Claude Code) disparar as mesmas ações do botão "Atualizar"/"Reiniciar", sem precisar logar na tela:
+
+```
+POST /api/trigger/<id do sistema>/update
+POST /api/trigger/<id do sistema>/restart
+GET  /api/trigger/<id do sistema>/status
+```
+
+Com o header `Authorization: Bearer <token>`. O token é mostrado **uma única vez**, no momento em que é gerado — só o hash dele fica salvo no banco (igual senha), então não tem como recuperar depois, só gerar um novo (o que invalida o anterior) ou remover.
+
+Pontos importantes de segurança:
+- O token é **específico de um sistema** — não dá pra usar o token de um sistema pra mexer em outro.
+- A atualização por API segue **exatamente a mesma regra do botão para um usuário comum**: se a análise de risco encontrar algo suspeito no que seria trazido do repositório, a atualização não é aplicada na hora — vira uma solicitação pendente em **Aprovações**, esperando um admin decidir, igual aconteceria clicando no botão. Isso vale mesmo que o dono do sistema seja administrador — automação desatendida nunca pula essa checagem.
+- Toda ação via token fica registrada na auditoria do sistema, marcada como "via token de API".
+
 ## Editando arquivos do sistema
 
 O link **Arquivos** no card abre um navegador da pasta do sistema com editor de texto (para ajustar `.env`, configs etc.). Dono e admins podem usar, cada um só nos sistemas que acessa.

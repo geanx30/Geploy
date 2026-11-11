@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Play, Square, RotateCw, Server, Globe, FolderGit2, ExternalLink, KeyRound, Trash2, FolderOpen } from 'lucide-react';
+import { RefreshCw, Play, Square, RotateCw, Server, Globe, FolderGit2, ExternalLink, KeyRound, Trash2, FolderOpen, Webhook } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext.jsx';
 import StatusBadge from './StatusBadge.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import UpdateCommandsModal from './UpdateCommandsModal.jsx';
 import GitCredentialsModal from './GitCredentialsModal.jsx';
+import ApiTokenModal from './ApiTokenModal.jsx';
 import { useToast } from './Toast.jsx';
 
 function AddressLink({ address }) {
@@ -47,6 +48,8 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
   const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
   const [removeTokenConfirm, setRemoveTokenConfirm] = useState(false);
   const [removingToken, setRemovingToken] = useState(false);
+  const [apiTokenModalOpen, setApiTokenModalOpen] = useState(false);
+  const [hasApiToken, setHasApiToken] = useState(system.has_api_token);
 
   async function refreshStatus() {
     setStatus('checking');
@@ -203,6 +206,14 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
         </button>
       )}
 
+      <button
+        onClick={() => setApiTokenModalOpen(true)}
+        className="flex items-center gap-1.5 self-start text-[11px] text-slate-400 hover:text-brand-600 dark:text-slate-600 dark:hover:text-brand-300"
+      >
+        <Webhook size={11} className="shrink-0" />
+        {hasApiToken ? 'Gerenciar token de API (automação)' : 'Gerar token de API (automação)'}
+      </button>
+
       <div className="mt-auto flex items-center gap-1.5 pt-1">
         <button
           className={needsGitToken ? 'btn-secondary min-w-0 flex-1 !border-amber-600/30 !text-amber-700 dark:!border-amber-500/30 dark:!text-amber-300 !px-3' : 'btn-primary min-w-0 flex-1 !px-3'}
@@ -264,6 +275,15 @@ export default function SystemCard({ system, onOpenOutput, ownerLabel }) {
         preview={preview}
         previewLoading={previewLoading}
         isAdmin={user?.role === 'admin'}
+      />
+
+      <ApiTokenModal
+        open={apiTokenModalOpen}
+        systemId={system.id}
+        systemName={system.name}
+        hasToken={hasApiToken}
+        onClose={() => setApiTokenModalOpen(false)}
+        onTokenChange={setHasApiToken}
       />
 
       <ConfirmDialog

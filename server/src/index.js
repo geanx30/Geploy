@@ -25,6 +25,10 @@ app.use('/api/admin', require('./routes/admin'));
 // a requisicao antes mesmo dela chegar nas rotas deste router (Express casa
 // por prefixo de path, nao por router exato).
 app.use('/api/deploy-requests', require('./routes/deploy'));
+// Fora do prefixo /api/systems de proposito, pelo mesmo motivo do comentario
+// acima: evita cair no "router.use(requireAuth)" daquele router (autenticacao
+// aqui e por token de API, nao por sessao de cookie).
+app.use('/api/trigger', require('./routes/apiTrigger'));
 
 const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
 app.use(express.static(clientDist));

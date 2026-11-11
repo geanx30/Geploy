@@ -129,6 +129,9 @@ if (!systemsColumns.includes('down_since')) {
 if (!systemsColumns.includes('down_alert_sent')) {
   raw.exec('ALTER TABLE systems ADD COLUMN down_alert_sent INTEGER NOT NULL DEFAULT 0');
 }
+if (!systemsColumns.includes('api_token_hash')) {
+  raw.exec('ALTER TABLE systems ADD COLUMN api_token_hash TEXT');
+}
 
 const usersColumns = raw.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
 if (!usersColumns.includes('must_change_password')) {

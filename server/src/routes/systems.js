@@ -9,6 +9,7 @@ const { performAction } = require('../services/processControl');
 const { logAction } = require('../audit');
 const { sendRiskAlert } = require('../services/alerts');
 const { encrypt } = require('../crypto');
+const { generateApiToken } = require('../services/apiToken');
 const files = require('../services/fileManager');
 
 const router = express.Router();
@@ -21,11 +22,12 @@ function needsGitToken(system) {
 }
 
 function toPublicSystem(system) {
-  const { git_token_encrypted, git_ssh_key_path, ...rest } = system;
+  const { git_token_encrypted, git_ssh_key_path, api_token_hash, ...rest } = system;
   return {
     ...rest,
     has_git_credentials: Boolean(git_token_encrypted || git_ssh_key_path),
     needs_git_token: needsGitToken(system),
+    has_api_token: Boolean(api_token_hash),
   };
 }
 
@@ -200,6 +202,42 @@ router.delete('/:id/git-credentials', loadSystemAndCheckOwnership, (req, res) =>
   });
 
   res.json(toPublicSystem(db.prepare('SELECT * FROM systems WHERE id = ?').get(req.system.id)));
+});
+
+// Token de API: permite update/restart via /api/trigger sem sessao de
+// usuario (pra automacao - ex.: um script/agente do proprio dono). O valor
+// em texto puro so e devolvido aqui, uma unica vez, na hora de gerar; so o
+// hash fica guardado (igual senha), entao nao tem como recuperar depois -
+// so gerar outro, que invalida o anterior.
+router.post('/:id/api-token', loadSystemAndCheckOwnership, (req, res) => {
+  const { token, hash } = generateApiToken();
+  db.prepare('UPDATE systems SET api_token_hash = ? WHERE id = ?').run(hash, req.system.id);
+
+  logAction({
+    userId: req.user.sub,
+    systemId: req.system.id,
+    action: 'api-token-generated',
+    success: true,
+    output: `Token de API ${req.system.api_token_hash ? 're' : ''}gerado por ${req.user.username}.${
+      req.system.api_token_hash ? ' O token anterior parou de funcionar.' : ''
+    }`,
+  });
+
+  res.json({ token });
+});
+
+router.delete('/:id/api-token', loadSystemAndCheckOwnership, (req, res) => {
+  db.prepare('UPDATE systems SET api_token_hash = NULL WHERE id = ?').run(req.system.id);
+
+  logAction({
+    userId: req.user.sub,
+    systemId: req.system.id,
+    action: 'api-token-removed',
+    success: true,
+    output: `Token de API removido por ${req.user.username}.`,
+  });
+
+  res.json({ ok: true });
 });
 
 router.post('/:id/preview-update', loadSystemAndCheckOwnership, async (req, res) => {

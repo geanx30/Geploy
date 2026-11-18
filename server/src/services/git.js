@@ -11,8 +11,21 @@ function run(cmd, args, options) {
       ? ['-c', `safe.directory=${options.cwd.replace(/\\/g, '/')}`, ...args]
       : args;
 
+  // Sem isso, um repositorio privado sem token/chave configurada faz o git
+  // tentar abrir um prompt de credencial (Git Credential Manager) - que
+  // nunca aparece porque o servico roda sem area de trabalho, entao o
+  // processo (e os sub-processos que ele cria, tipo git-remote-https e
+  // credential-manager) ficava pendurado para sempre, nunca derrubado pelo
+  // timeout abaixo (o timeout do execFile so mata o processo direto, nao a
+  // arvore inteira no Windows). Com GIT_TERMINAL_PROMPT=0 o git falha na
+  // hora, com uma mensagem clara, em vez de travar.
+  const finalOptions =
+    cmd === 'git'
+      ? { ...options, env: { GIT_TERMINAL_PROMPT: '0', ...(options?.env || {}) } }
+      : options;
+
   return new Promise((resolve) => {
-    execFile(cmd, finalArgs, { timeout: 2 * 60 * 1000, ...options }, (error, stdout, stderr) => {
+    execFile(cmd, finalArgs, { timeout: 2 * 60 * 1000, ...finalOptions }, (error, stdout, stderr) => {
       resolve({
         success: !error,
         code: error?.code ?? 0,

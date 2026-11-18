@@ -6,8 +6,24 @@ function runLine(line, cwd) {
   return new Promise((resolve) => {
     execFile(
       'cmd.exe',
-      ['/d', '/s', '/c', line],
-      { cwd, timeout: 10 * 60 * 1000, env: process.env, windowsHide: true },
+      // O "/s" faz o cmd.exe tirar so o PRIMEIRO e o ULTIMO char de aspas do
+      // que vem depois de /c, assumindo que a linha inteira foi embrulhada
+      // numa aspa extra - por isso embrulhamos aqui. Sem esse envolucro extra,
+      // uma linha com mais de um trecho entre aspas (ex.: caminho do python +
+      // varios -r "arquivo.txt") faz o cmd.exe tirar as aspas erradas e colar
+      // pedacos que nao tem espaco entre si, virando "path not found".
+      ['/d', '/s', '/c', `"${line}"`],
+      {
+        cwd,
+        timeout: 10 * 60 * 1000,
+        env: process.env,
+        windowsHide: true,
+        // Sem isso, o Node reescapa aspas internas do argumento com `\"` antes
+        // de repassar pro cmd.exe (convencao de parsing de argv normal), mas o
+        // cmd.exe nao entende esse escape. windowsVerbatimArguments faz o Node
+        // passar o argumento como esta, deixando o cmd.exe parsear sozinho.
+        windowsVerbatimArguments: true,
+      },
       (error, stdout, stderr) => {
         resolve({
           success: !error,
